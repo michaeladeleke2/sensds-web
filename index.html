@@ -4,26 +4,41 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SensDS Web</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@600;700&display=swap">
 <style>
-  /* SensDSv2 ui/__init__.py app_colors(), light and dark */
+  /* Palette from the SensDS logo (navy, blue, cyan), light and dark.
+     Layout: app bar on top; each tab is a control panel on the left and its
+     work area (plot, game, charts) on the right, on soft cards. */
   :root {
-    --bg: #f0f2f5; --panel: #ffffff; --border: #dddddd; --input-bg: #ffffff; --input-border: #cccccc;
-    --text: #333333; --subtext: #555555; --faint: #777777; --accent: #1a3a5c; --tab-hover: #e2e8f0;
-    --divider: #eeeeee; --progress-bg: #e0e0e0; --hint-bg: #f0f4ff; --hint-text: #888888;
+    --bg: #f3f6fa; --panel: #ffffff; --border: #e3e9f1; --input-bg: #f8fafc; --input-border: #d4dce7;
+    --text: #0f2340; --subtext: #4a5b73; --faint: #7a889c; --accent: #1766c2; --tab-hover: #eef3f9;
+    --divider: #edf1f6; --progress-bg: #e3e9f1; --hint-bg: #f0f6fd; --hint-text: #4a5b73;
+    --brand-cyan: #1fb3d2; --on-accent: #ffffff; --accent-soft: rgba(23, 102, 194, 0.10); --ok: #1f9d55; --warn: #d97706; --bad: #c53030;
+    --shadow: 0 1px 2px rgba(15, 35, 64, 0.06), 0 4px 14px rgba(15, 35, 64, 0.06);
+    --radius: 12px; --radius-sm: 8px;
+    --font: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-display: "Montserrat", "DM Sans", system-ui, sans-serif;
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #1c1c1e; --panel: #2c2c2e; --border: #3c3c3e; --input-bg: #3a3a3a; --input-border: #555555;
-      --text: #f0f0f0; --subtext: #b0b0b0; --faint: #888888; --accent: #5b9bd5; --tab-hover: #2a2a2c;
-      --divider: #3c3c3e; --progress-bg: #3a3a3a; --hint-bg: #252535; --hint-text: #a0a0a0;
+      --bg: #0b1220; --panel: #111a2b; --border: #1e2a3f; --input-bg: #0d1625; --input-border: #2a3a55;
+      --text: #e6edf7; --subtext: #a8b5c8; --faint: #7a89a0; --accent: #4fb0ff; --tab-hover: #17233a;
+      --divider: #1a2537; --progress-bg: #22314a; --hint-bg: #12203a; --hint-text: #a8b5c8;
+      --brand-cyan: #3cc8e6; --on-accent: #06182e; --accent-soft: rgba(79, 176, 255, 0.14);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 18px rgba(0, 0, 0, 0.25);
       color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #1c1c1e; --panel: #2c2c2e; --border: #3c3c3e; --input-bg: #3a3a3a; --input-border: #555555;
-    --text: #f0f0f0; --subtext: #b0b0b0; --faint: #888888; --accent: #5b9bd5; --tab-hover: #2a2a2c;
-    --divider: #3c3c3e; --progress-bg: #3a3a3a; --hint-bg: #252535; --hint-text: #a0a0a0;
+    --bg: #0b1220; --panel: #111a2b; --border: #1e2a3f; --input-bg: #0d1625; --input-border: #2a3a55;
+    --text: #e6edf7; --subtext: #a8b5c8; --faint: #7a89a0; --accent: #4fb0ff; --tab-hover: #17233a;
+    --divider: #1a2537; --progress-bg: #22314a; --hint-bg: #12203a; --hint-text: #a8b5c8;
+    --brand-cyan: #3cc8e6; --on-accent: #06182e; --accent-soft: rgba(79, 176, 255, 0.14);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 18px rgba(0, 0, 0, 0.25);
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -31,20 +46,9 @@
   html, body { height: 100%; margin: 0; }
   body { background: var(--bg); color: var(--text); font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; display: flex; flex-direction: column; }
 
-  /* Source bar (web only: the desktop connects from its main window) */
-  #sourcebar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--border); }
-  #sourcebar .brand { font-weight: bold; color: var(--accent); margin-right: 8px; }
-  #status { color: var(--subtext); margin-left: auto; font-size: 12px; }
-  button, select { font: inherit; color: var(--text); background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 5px; padding: 5px 10px; cursor: pointer; }
+  button, select { font: inherit; color: var(--text); background: var(--input-bg); border: 1px solid var(--input-border); border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer; }
   button:hover:not(:disabled) { background: var(--tab-hover); }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
-  button.primary { color: var(--accent); font-weight: bold; }
-
-  /* Tab bar (the desktop's QTabWidget) */
-  #tabbar { display: flex; gap: 2px; padding: 0 16px; background: var(--panel); border-bottom: 1px solid var(--border); overflow-x: auto; }
-  #tabbar button { border: none; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; padding: 8px 14px; color: var(--subtext); }
-  #tabbar button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: bold; }
-  #tabbar button:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .pane { flex: 1; display: flex; min-height: 0; }
   .pane[hidden] { display: none !important; }
 
@@ -257,31 +261,116 @@
     .preview-side { padding: 12px 16px; }
     .preview-box { min-height: 300px; }
   }
+
+  /* ══════════ Modern shell and components ══════════ */
+  body { font: 14px/1.45 var(--font); -webkit-font-smoothing: antialiased; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* App bar: brand, tabs, radar status, connect */
+  #appbar { display: flex; align-items: center; gap: 20px; padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--border); position: relative; z-index: 2; }
+  .brand { display: flex; align-items: center; gap: 10px; flex: none; }
+  .brand img { width: 34px; height: 34px; display: block; }
+  .brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+  .brand-name { font-family: var(--font-display); font-weight: 700; font-size: 17px; letter-spacing: 0.01em; color: var(--text); }
+  .brand-sub { font-size: 11px; color: var(--faint); letter-spacing: 0.02em; }
+  #tabbar { display: flex; gap: 4px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+  #tabbar::-webkit-scrollbar { display: none; }
+  #tabbar button { display: inline-flex; align-items: center; gap: 7px; border: none; background: transparent; color: var(--subtext); padding: 8px 14px; border-radius: 999px; font-weight: 500; white-space: nowrap; }
+  #tabbar button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  #tabbar button:hover { background: var(--tab-hover); color: var(--text); }
+  #tabbar button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .appbar-right { display: flex; align-items: center; gap: 10px; flex: none; min-width: 0; margin-left: auto; }
+  .radar-chip { display: flex; align-items: center; gap: 8px; max-width: 340px; min-width: 0; padding: 6px 12px; border-radius: 999px; background: var(--input-bg); border: 1px solid var(--border); font-size: 12px; color: var(--subtext); }
+  .radar-chip #status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .radar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); flex: none; }
+  .radar-chip.live .radar-dot { background: var(--ok); box-shadow: 0 0 0 0 rgba(31, 157, 85, 0.5); animation: pulse 2s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(31, 157, 85, 0.45); } 70% { box-shadow: 0 0 0 7px rgba(31, 157, 85, 0); } 100% { box-shadow: 0 0 0 0 rgba(31, 157, 85, 0); } }
+  @media (prefers-reduced-motion: reduce) { .radar-chip.live .radar-dot { animation: none; } }
+  .btn-primary { background: var(--accent); color: var(--on-accent); border: none; font-weight: 600; padding: 8px 16px; border-radius: 999px; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
+
+  /* Control panels: more air, quieter section labels */
+  .side, #panel { width: 320px; padding: 22px 20px; gap: 10px; border-right: 1px solid var(--border); background: var(--panel); scrollbar-width: thin; }
+  .heading, .test-heading { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: 0.005em; }
+  .field-label, .test-field-label, .res-section { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--faint); }
+  label.field-label, label.test-field-label { margin-top: 2px; }
+  hr { border: none; border-top: 1px solid var(--divider); margin: 8px 0; }
+  .desc, .capture-note, .small, .note { color: var(--faint); }
+  select, .side input[type=text], .side input[type=number], .mode-controls input[type=number], .cfg-row input { height: 36px; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text); font-size: 14px; max-height: none; }
+  select:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input[type=range] { accent-color: var(--accent); }
+  label.check { font-size: 14px; gap: 8px; }
+  label.check input { width: 16px; height: 16px; accent-color: var(--accent); }
+  .source-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .minor-btn { border-radius: var(--radius-sm); padding: 8px 12px; background: var(--input-bg); }
+  .big-btn, .primary-btn, .game-btn, .train-btn { border-radius: 10px; padding: 12px; font-weight: 600; letter-spacing: 0.01em; box-shadow: var(--shadow); }
+  .hint { background: var(--hint-bg); border: none; border-radius: 10px; padding: 10px 12px; }
+  .hint span:last-child { color: var(--hint-text); font-size: 12.5px; line-height: 1.45; }
+  #readout { border-radius: var(--radius-sm); background: var(--input-bg); padding: 10px 12px; }
+  .counts, .classes-frame { border-radius: 10px; }
+  progress { height: 6px; border-radius: 999px; }
+
+  /* Work areas on soft cards */
+  #plotarea { padding: 16px 20px; }
+  #plot, .preview-box canvas, .plot-box canvas, .chart-box canvas, .game-area canvas { border-radius: var(--radius); box-shadow: var(--shadow); }
+  .preview-side, .plot-col, .train-main, .test-main { padding: 20px; gap: 12px; }
+  .detail { width: 320px; padding: 22px 20px; border-left: 1px solid var(--border); }
+  .res-card, .bars-frame, .train-log, .summary-box { border-radius: var(--radius); border-color: var(--border); box-shadow: var(--shadow); }
+  .results-pane { padding: 16px 20px; gap: 12px; }
+  .res-middle, .charts-row, .test-bottom { gap: 12px; }
+  .subtabbar { gap: 4px; padding: 8px 20px; border-bottom: 1px solid var(--border); }
+  .subtabbar button { border: none; border-radius: 999px; padding: 7px 16px; min-width: 0; font-weight: 500; }
+  .subtabbar button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); border: none; font-weight: 600; }
+  .mode-btn { border-radius: 10px; height: 40px; font-weight: 500; }
+  .mode-btn.active { background: var(--accent); border-color: var(--accent); }
+  .load-model-btn { border-radius: 10px; border-width: 1.5px; background: var(--accent-soft); }
+  .spec-frame { border-radius: var(--radius); }
+  .gesture-bar { border-radius: 10px; }
+  .history-table th { background: var(--panel); }
+
+  @media (max-width: 900px) {
+    #appbar { flex-wrap: wrap; gap: 10px 16px; padding: 10px 16px; }
+    #tabbar { order: 3; flex-basis: 100%; }
+    .brand-sub { display: none; }
+    .radar-chip { max-width: 46vw; }
+  }
+  @media (max-width: 700px) {
+    .side, #panel, .detail { width: 100%; }
+    #plotarea { padding: 12px 16px; }
+  }
 </style>
 </head>
 <body>
-<div id="sourcebar">
-  <span class="brand">SensDS</span>
-  <button id="connectBtn" class="primary" disabled title="Live radar needs Chrome or Edge on a computer.">Connect Radar</button>
-  <button id="openBtn" title="Play a raw capture saved by SensDSv2's Collect tab (sample_NNN_raw.npy), at the radar's 10 frames per second.">Open recording…</button>
-  <input id="fileInput" type="file" accept=".npy" hidden>
-  <button id="pauseBtn" disabled>Pause</button>
-  <label class="check" id="loopLabel"><input id="loopChk" type="checkbox" checked> Loop</label>
-  <span id="status">No source. Open a recording saved by SensDSv2.</span>
-</div>
-
-<nav id="tabbar" role="tablist">
-  <button id="tab-visualize" role="tab" aria-selected="true">📡   Visualize</button>
-  <button id="tab-collect" role="tab" aria-selected="false">🎙   Collect</button>
-  <button id="tab-analysis" role="tab" aria-selected="false">🔬   Analysis</button>
-  <button id="tab-train" role="tab" aria-selected="false">🧠   Train</button>
-  <button id="tab-test" role="tab" aria-selected="false">✋   Test</button>
-  <button id="tab-results" role="tab" aria-selected="false">📊   Results</button>
-</nav>
+<header id="appbar">
+  <div class="brand">
+    <img src="assets/logo-mark.png" alt="" width="34" height="34">
+    <div class="brand-text"><span class="brand-name">SensDS</span><span class="brand-sub">Sensing for Data Science</span></div>
+  </div>
+  <nav id="tabbar" role="tablist" aria-label="Sections">
+    <button id="tab-visualize" role="tab" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h3l3-8 4 16 3-8h5"/></svg>Visualize</button>
+    <button id="tab-collect" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>Collect</button>
+    <button id="tab-analysis" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="16" r="1.6"/><circle cx="11" cy="9" r="1.6"/><circle cx="16" cy="13" r="1.6"/><circle cx="18" cy="6" r="1.6"/><path d="M3 3v18h18"/></svg>Analysis</button>
+    <button id="tab-train" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 10h4v4h-4z"/></svg>Train</button>
+    <button id="tab-test" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.8" fill="currentColor"/></svg>Test</button>
+    <button id="tab-results" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-7"/></svg>Results</button>
+  </nav>
+  <div class="appbar-right">
+    <div id="radarChip" class="radar-chip"><span class="radar-dot" aria-hidden="true"></span><span id="status" role="status">No source. Open a recording saved by SensDSv2.</span></div>
+    <button id="connectBtn" class="btn-primary" disabled title="Live radar needs Chrome or Edge on a computer.">Connect Radar</button>
+  </div>
+</header>
 
 <div id="visualizePane" class="pane" role="tabpanel">
   <div id="panel">
     <div class="heading">Visualize</div>
+    <hr>
+    <div class="field-label">Source</div>
+    <div class="source-row">
+      <button id="openBtn" title="Play a raw capture saved by SensDSv2's Collect tab (sample_NNN_raw.npy), at the radar's 10 frames per second.">Open recording…</button>
+      <button id="pauseBtn" disabled>Pause</button>
+    </div>
+    <input id="fileInput" type="file" accept=".npy" hidden>
+    <label class="check" id="loopLabel"><input id="loopChk" type="checkbox" checked> Loop recordings</label>
     <hr>
     <div class="field-label">Spectrogram Method</div>
     <select id="methodSel">

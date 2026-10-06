@@ -43,7 +43,7 @@ const entries = [...html.matchAll(/<script[^>]*\ssrc="([^"]+)"/g)].map(m => norm
 const main = staticClosure(entries);
 
 // Code loaded on demand (the radar, on Connect Radar) is included too.
-const files = new Set(['index.html', ...main.seen]);
+const files = new Set(['index.html', 'assets/logo-mark.png', 'assets/favicon.png', ...main.seen]);
 for (const d of new Set(main.dynamic)) for (const f of staticClosure([d]).seen) files.add(f);
 const strata = [...files].filter(isStrata);
 

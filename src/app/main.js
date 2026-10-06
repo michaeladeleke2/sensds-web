@@ -10,7 +10,9 @@ import { initResults, showResults } from './results.js';
 import { connectRadar, disconnectRadar, isConnected, onRadarState, hasWebSerial } from './radar_session.js';
 
 const $ = id => document.getElementById(id);
-const setStatus = text => { $('status').textContent = text; };
+// The status sits in a chip in the app bar; long messages are cut short there,
+// so the full text is also its tooltip.
+const setStatus = text => { $('status').textContent = text; $('radarChip').title = text; };
 
 // ---------- tabs ----------
 const TABS = {
@@ -28,8 +30,6 @@ function selectTab(name) {
     $(t.pane).hidden = key !== name;
     $(`tab-${key}`).setAttribute('aria-selected', String(key === name));
   }
-  // Recording playback belongs to the Visualize tab
-  for (const id of ['openBtn', 'pauseBtn', 'loopLabel']) $(id).hidden = name !== 'visualize';
   TABS[name].show();
   try { localStorage.setItem('sensds-tab', name); } catch { /* per-viewer convenience only */ }
 }
@@ -51,6 +51,7 @@ connectBtn.onclick = async () => {
 };
 onRadarState(({ connected, message, restarted }) => {
   connectBtn.textContent = connected ? 'Disconnect Radar' : 'Connect Radar';
+  $('radarChip').classList.toggle('live', connected);
   if (message) setStatus(message);
   if (connected && !restarted) onRadarConnected();
 });
