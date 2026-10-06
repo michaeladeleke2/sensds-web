@@ -20,7 +20,7 @@ import { writeNpy } from '../io/npy.js';
 import { encodePngRgb } from '../io/png.js';
 import {
   canChooseFolder, rememberedFolder, chooseFolder, ensureWritable,
-  subfolder, tryFolder, listNames, writeFile, readText, canRead,
+  subfolder, tryFolder, listNames, writeFile, readText, canRead, setCurrentFolder, onFolderChange,
 } from '../io/folder.js';
 import { RecordedSpectrogramPlot } from '../viz/recorded_plot.js';
 import { subscribeFrames, isConnected } from './radar_session.js';
@@ -214,9 +214,9 @@ async function refreshWarning() {
 // ---------- data folder ----------
 async function pickFolder() {
   if (!canChooseFolder()) { status('This browser cannot save to a folder. Use Chrome or Edge on a computer.', 'error'); return; }
-  try { folder = await chooseFolder(); } catch { return; }       // closed the picker
-  showFolder();
-  await refreshCounts();
+  let picked;
+  try { picked = await chooseFolder(); } catch { return; }       // closed the picker
+  setCurrentFolder(picked);                                        // shared with the Analysis tab
 }
 
 function showFolder() { $('folderBtn').textContent = folder ? `📂  Data folder: ${folder.name}` : '📂  Choose Data Folder'; }
@@ -247,9 +247,8 @@ export async function initCollect() {
   new ResizeObserver(() => preview.redraw()).observe($('previewCanvas'));
 
   if (!canChooseFolder()) $('folderBtn').title = 'Saving to a folder needs Chrome or Edge on a computer.';
-  folder = await rememberedFolder();
-  showFolder();
-  refreshCounts().catch(() => {});
+  onFolderChange(h => { folder = h; showFolder(); refreshCounts().catch(() => {}); });
+  setCurrentFolder(await rememberedFolder());
 }
 
 export function showCollect() { preview.redraw(); refreshCounts().catch(() => {}); }

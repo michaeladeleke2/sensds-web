@@ -3,13 +3,18 @@
 
 import { initVisualize, showVisualize, onRadarConnected } from './visualize.js';
 import { initCollect, showCollect } from './collect.js';
+import { initAnalysis, showAnalysis } from './analysis.js';
 import { connectRadar, disconnectRadar, isConnected, onRadarState, hasWebSerial } from './radar_session.js';
 
 const $ = id => document.getElementById(id);
 const setStatus = text => { $('status').textContent = text; };
 
 // ---------- tabs ----------
-const TABS = { visualize: { pane: 'visualizePane', show: showVisualize }, collect: { pane: 'collectPane', show: showCollect } };
+const TABS = {
+  visualize: { pane: 'visualizePane', show: showVisualize },
+  collect: { pane: 'collectPane', show: showCollect },
+  analysis: { pane: 'analysisPane', show: showAnalysis },
+};
 function selectTab(name) {
   for (const [key, t] of Object.entries(TABS)) {
     $(t.pane).hidden = key !== name;
@@ -43,6 +48,7 @@ onRadarState(({ connected, message }) => {
 });
 
 initVisualize({ status: setStatus });
+initAnalysis();
 initCollect();
 let start = 'visualize';
 try { start = localStorage.getItem('sensds-tab') || 'visualize'; } catch { /* default tab */ }

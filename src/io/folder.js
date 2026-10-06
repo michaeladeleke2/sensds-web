@@ -69,3 +69,10 @@ export async function readText(dir, name) {
 export async function canRead(handle) {
   try { return (await handle.queryPermission({ mode: 'readwrite' })) === 'granted'; } catch { return false; }
 }
+
+// The data folder is shared by the Collect and Analysis tabs.
+let current = null;
+const folderListeners = new Set();
+export const currentFolder = () => current;
+export function setCurrentFolder(handle) { current = handle; for (const fn of folderListeners) fn(handle); }
+export const onFolderChange = fn => folderListeners.add(fn);

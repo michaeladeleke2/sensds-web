@@ -97,8 +97,47 @@
   .bottom-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
   #sampleCount { font-size: 12px; color: var(--faint); min-width: 0; overflow-wrap: anywhere; }
 
+  /* Analysis tab (ui/analysis_tab.py, features_tab.py, pca_tab.py) */
+  #analysisPane { flex-direction: column; }
+  .subtabbar { display: flex; gap: 2px; padding: 0 16px; background: var(--panel); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .subtabbar button { border: none; border-bottom: 3px solid transparent; border-radius: 0; background: transparent; padding: 9px 22px; color: var(--subtext); min-width: 150px; }
+  .subtabbar button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: bold; }
+  .subpane { flex: 1; display: flex; min-height: 0; }
+  .side.compact { padding: 18px; }
+  .status-ok { font-size: 12px; color: #27ae60; font-weight: bold; white-space: pre-wrap; }
+  .status-err { font-size: 12px; color: #e74c3c; font-weight: bold; white-space: pre-wrap; }
+  .note { font-size: 11px; color: var(--subtext); white-space: pre-line; }
+  .small { font-size: 11px; color: var(--faint); }
+  .minor-btn { color: var(--accent); font-weight: bold; font-size: 12px; padding: 6px 10px; }
+  .primary-btn { border: none; border-radius: 6px; padding: 10px; font-size: 13px; font-weight: bold; color: #fff; background: var(--accent); }
+  .primary-btn:hover:not(:disabled) { background: #245080; }
+  .primary-btn:disabled { background: var(--progress-bg); color: var(--faint); opacity: 1; }
+  .plot-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 16px; position: relative; }
+  .plot-box { flex: 1; min-height: 180px; position: relative; }
+  .plot-box canvas { width: 100%; height: 100%; display: block; border-radius: 4px; }
+  .tip { position: absolute; z-index: 5; pointer-events: none; white-space: pre; font-size: 12px; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
+  .zoom-row { display: flex; justify-content: flex-end; gap: 6px; }
+  .zoom-btn { color: var(--accent); font-weight: bold; font-size: 13px; padding: 3px 10px; min-width: 34px; }
+  .caption { font-size: 12px; color: var(--subtext); font-family: Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace; overflow-wrap: anywhere; }
+  .measures { font-size: 11px; color: var(--faint); }
+  .summary-box { font-size: 13px; font-weight: bold; color: var(--accent); background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 10px; min-height: 62px; }
+  .detail { width: 300px; flex: none; overflow-y: auto; background: var(--panel); border-left: 1px solid var(--border); padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+  #detailBody { display: flex; flex-direction: column; gap: 8px; }
+  .img-frame { width: 264px; height: 198px; max-width: 100%; display: flex; align-items: center; justify-content: center; text-align: center; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 5px; color: var(--faint); font-size: 11px; overflow: hidden; }
+  .img-frame img { width: 100%; height: 100%; object-fit: contain; }
+  .detail-meta { font-size: 12px; color: var(--text); overflow-wrap: anywhere; }
+  #featRows { display: flex; flex-direction: column; gap: 6px; }
+  .feat-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+  .feat-name { font-size: 11px; color: var(--subtext); }
+  .feat-val { font-size: 12px; color: var(--text); text-align: right; font-variant-numeric: tabular-nums; }
+  .feat-row.on-axis .feat-name { color: var(--text); font-weight: bold; }
+  .feat-row.on-axis .feat-val { color: var(--accent); font-weight: bold; }
+
   @media (max-width: 700px) {
-    .pane { flex-direction: column; }
+    .pane, .subpane { flex-direction: column; }
+    .detail { width: 100%; border-left: none; border-top: 1px solid var(--border); padding: 12px 16px; }
+    .plot-col { padding: 12px 16px; }
+    .plot-box { min-height: 300px; }
     #panel, .side { width: 100%; border-right: none; border-bottom: 1px solid var(--border); padding: 12px 16px; }
     #plotarea { min-height: 360px; padding: 8px 16px; }
     .preview-side { padding: 12px 16px; }
@@ -120,6 +159,7 @@
 <nav id="tabbar" role="tablist">
   <button id="tab-visualize" role="tab" aria-selected="true">📡   Visualize</button>
   <button id="tab-collect" role="tab" aria-selected="false">🎙   Collect</button>
+  <button id="tab-analysis" role="tab" aria-selected="false">🔬   Analysis</button>
 </nav>
 
 <div id="visualizePane" class="pane" role="tabpanel">
@@ -199,6 +239,102 @@
     <div class="bottom-row">
       <span id="sampleCount">No samples collected yet.</span>
       <button id="folderBtn" title="Where samples are saved. Choose your SensDSv2_data folder to add to the same dataset the desktop app uses.">📂  Choose Data Folder</button>
+    </div>
+  </div>
+</div>
+
+<div id="analysisPane" class="pane" role="tabpanel" hidden>
+  <nav class="subtabbar" role="tablist">
+    <button id="subtab-features" role="tab" aria-selected="true">📈   Physical Features</button>
+    <button id="subtab-pca" role="tab" aria-selected="false">🔬   PCA Comparison</button>
+  </nav>
+
+  <div id="sub-features" class="subpane">
+    <div class="side compact">
+      <div class="heading">Physical Features</div>
+      <hr>
+      <div class="field-label">Dataset</div>
+      <div id="featStatus"></div>
+      <button id="featFolderBtn" class="minor-btn" title="Where your samples are saved: the same folder the Collect tab uses.">📂  Choose Data Folder</button>
+      <button id="featRefreshBtn" class="minor-btn">↻  Refresh</button>
+      <button id="extractBtn" class="primary-btn" disabled>▶  Extract Features</button>
+      <progress id="featProgress" hidden></progress>
+      <hr>
+      <div class="field-label">Plot Axes</div>
+      <label class="small" for="xSel">X axis</label>
+      <select id="xSel"></select>
+      <label class="small" for="ySel">Y axis</label>
+      <select id="ySel"></select>
+      <label class="small" for="colorSel">Color by</label>
+      <select id="colorSel"><option value="gesture">Gesture</option><option value="student">Student</option></select>
+      <hr>
+      <div class="field-label">Export for CODAP</div>
+      <div class="note">Summary: one line for each gesture you recorded, holding its four measurements. Use this to compare gestures.
+
+Frames: one line for every picture the radar took, ten per second. Use this to see how distance and speed changed while a single gesture was happening.</div>
+      <button id="summaryCsvBtn" class="minor-btn" disabled>⤓  Summary CSV</button>
+      <button id="framesCsvBtn" class="minor-btn" disabled>⤓  Frames CSV</button>
+      <div class="spacer"></div>
+      <div class="hint"><span aria-hidden="true">💡</span><span id="featHint"></span></div>
+      <div class="small" id="featMsg"></div>
+    </div>
+    <div class="plot-col">
+      <div class="plot-box"><canvas id="featCanvas"></canvas></div>
+      <div id="featZoom"></div>
+      <div class="note" id="featCaption">Extract features to plot them.</div>
+      <div class="tip" id="featTip" hidden></div>
+    </div>
+    <div class="detail">
+      <div class="heading">Selected Sample</div>
+      <hr>
+      <div class="note" id="detailHint">Click any point on the plot to see the recording it came from: its spectrogram picture and all of its measurements.</div>
+      <div id="detailBody" hidden>
+        <div class="img-frame"><img id="detailImg" alt="Spectrogram training image for the selected sample" hidden><span id="detailNoImg" hidden>No spectrogram image was saved next to this recording.</span></div>
+        <div class="detail-meta"><b id="detailGesture"></b>  ·  <span id="detailStudent"></span><br><span id="detailName"></span><br><span id="detailFrames"></span></div>
+        <hr>
+        <div class="field-label">Measurements</div>
+        <div id="featRows"></div>
+        <div class="small">The two highlighted rows are what the plot is showing.</div>
+        <div class="small" id="detailFolder"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sub-pca" class="subpane" hidden>
+    <div class="side">
+      <div class="heading">PCA Comparison</div>
+      <hr>
+      <div class="field-label">Dataset Status</div>
+      <div id="pcaSamples"></div>
+      <div id="pcaClasses"></div>
+      <button id="pcaFolderBtn" class="minor-btn" title="Where your samples are saved: the same folder the Collect tab uses.">📂  Choose Data Folder</button>
+      <button id="pcaRefreshBtn" class="minor-btn">↻  Refresh</button>
+      <hr>
+      <div class="note">This compares two ways of describing the same capture:
+
+• Doppler domain: the spectrogram, ex. how fast things moved.
+
+• Range domain: the range FFT profile, ex. how far away things were.
+
+Both are reduced to 2D with PCA. The one whose classes form tighter, more separated clusters is the better representation for telling these gestures apart.</div>
+      <div class="spacer"></div>
+      <div class="hint"><span aria-hidden="true">💡</span><span id="pcaHint"></span></div>
+      <button id="pcaRunBtn" class="primary-btn" disabled>▶  Run Analysis</button>
+      <progress id="pcaProgress" hidden></progress>
+      <div class="small" id="pcaMsg"></div>
+    </div>
+    <div class="plot-col">
+      <div class="measures">Measuring:  Doppler spectrogram amplitude  ·  32x32 resized  ·  1024 features  ·  units dB</div>
+      <div class="plot-box"><canvas id="specCanvas"></canvas></div>
+      <div class="caption" id="specCaption"></div>
+      <div id="specZoom"></div>
+      <div class="measures">Measuring:  range profile magnitude + phase  ·  32x32 each  ·  2048 features  ·  units linear amplitude and radians (phase dominates the variance)</div>
+      <div class="plot-box"><canvas id="rfftCanvas"></canvas></div>
+      <div class="caption" id="rfftCaption"></div>
+      <div id="rfftZoom"></div>
+      <div class="summary-box" id="pcaSummary">Run the analysis to compare the two representations.</div>
+      <div class="tip" id="specTip" hidden></div>
+      <div class="tip" id="rfftTip" hidden></div>
     </div>
   </div>
 </div>

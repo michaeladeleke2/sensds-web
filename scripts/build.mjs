@@ -18,6 +18,8 @@ function imports(file) {
   const rel = spec => normalize(join(dirname(file), spec));
   const stat = [...text.matchAll(/(?:\bfrom\s*|^\s*import\s+)['"](\.{1,2}\/[^'"]+)['"]/gm)].map(m => rel(m[1]));
   const dyn = [...text.matchAll(/\bimport\s*\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*\)/g)].map(m => rel(m[1]));
+  // Workers: new URL('./worker.js', import.meta.url)
+  for (const m of text.matchAll(/new\s+URL\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*,\s*import\.meta\.url\s*\)/g)) dyn.push(rel(m[1]));
   return { stat, dyn };
 }
 

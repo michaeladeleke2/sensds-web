@@ -8,6 +8,8 @@ Update 2026-10-05 (later): register list exported with SDK 3.6.4 (38 registers);
 
 Update 2026-10-05 (later): Collect tab ported (Infineon SDK method). compute_recorded, reference_rgb, Pillow BILINEAR resize and the 400x300 training image are byte-identical to SensDSv2 (tests/collect.test.js, fixtures from reference/python/make_collect_fixtures.py). Procedure: `docs/procedures/collect_samples.md`.
 
+Update 2026-10-05 (later): Analysis tab ported (Physical Features, PCA Comparison). Tracked range bins identical, features within 1e-9, CSV text identical, zoom resize within 1e-12, PCA variance and silhouette match SensDSv2 (tests/analysis.test.js, fixtures from reference/python/make_analysis_fixtures.py, including the 20 real frames). Extraction runs in a Web Worker. Procedure: `docs/procedures/analysis.md`.
+
 Decisions (2026-10-05):
 
 1. Radar SDK **3.6.4** is the reference (what SensDSv2 runs).
