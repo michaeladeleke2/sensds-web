@@ -14,6 +14,8 @@ Update 2026-10-05 (later): Train tab ported: the same ViT fine-tuned in the brow
 
 Update 2026-10-05 (later): Test tab ported (Try a Gesture, RoboSoccer, Maze Game) with the desktop's timings, thresholds, cooldowns, prediction cache and messages. Inference in a Web Worker on WebGPU; probabilities match transformers (AutoImageProcessor -> model -> softmax) within 0.002 on a saved model folder. A tfjs-core-only test guards against code that relies on the full TensorFlow.js package. Procedure: `docs/procedures/test_model.md`.
 
+Update 2026-10-05 (later): Results tab ported (confusion matrix, accuracy per gesture, prediction history, CSV export identical in format). Procedure: `docs/procedures/results.md`.
+
 Decisions (2026-10-05):
 
 1. Radar SDK **3.6.4** is the reference (what SensDSv2 runs).

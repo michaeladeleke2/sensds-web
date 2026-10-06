@@ -209,7 +209,38 @@
   .bars-title { font-size: 14px; font-weight: bold; color: var(--accent); }
   #barsCanvas { flex: 1; width: 100%; min-height: 80px; display: block; }
 
+  /* Results tab (ui/results_tab.py) */
+  .results-pane { flex-direction: column; gap: 8px; padding: 10px 14px; overflow: auto; }
+  .res-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .res-header { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 14px; }
+  .res-heading { font-size: 16px; font-weight: bold; color: var(--accent); }
+  .res-model-pill { font-size: 12px; font-weight: bold; color: #1a3a5c; background: #e8f0fb; border-radius: 4px; padding: 3px 10px; }
+  .res-classes { flex: 1; font-size: 12px; color: var(--subtext); min-width: 0; }
+  .res-summary { font-size: 12px; color: var(--subtext); font-variant-numeric: tabular-nums; }
+  .res-section { font-size: 12px; font-weight: bold; color: var(--accent); }
+  .res-sub { font-size: 11px; color: #888; }
+  .res-middle { flex: 3; min-height: 300px; display: flex; gap: 8px; }
+  .res-matrix { flex: 3; }
+  .res-matrix canvas, .res-acc canvas { flex: 1; width: 100%; min-height: 120px; display: block; }
+  .res-right { flex: 2; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  .res-acc { flex: 1; min-height: 0; }
+  .res-right > .res-card:last-child { flex: none; }
+  .res-history { flex: 2; min-height: 180px; }
+  .res-history-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .res-history-head .res-section { flex: none; }
+  .res-history-head #resMsg { flex: 1; }
+  .res-btn { color: #1a3a5c; font-weight: bold; font-size: 12px; padding: 5px 14px; background: #fff; border: 1px solid #ccc; }
+  .res-clear-btn { color: #c0392b; font-weight: bold; font-size: 12px; padding: 5px 14px; background: #fff; border: 1px solid #f5c6c6; }
+  .history-wrap { flex: 1; min-height: 100px; overflow: auto; }
+  .history-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .history-table th { position: sticky; top: 0; background: var(--bg); color: var(--accent); font-weight: bold; padding: 6px 8px; border-bottom: 2px solid var(--border); text-align: center; }
+  .history-table td { padding: 4px 8px; border-bottom: 1px solid var(--divider); white-space: nowrap; }
+  .history-table td.predicted { color: var(--accent); width: 100%; white-space: normal; }
+  .history-table tbody tr:nth-child(even) { background: var(--bg); }
+
   @media (max-width: 700px) {
+    .res-middle { flex-direction: column; }
+    .results-pane { padding: 10px 16px; }
     .test-side { width: 100%; }
     .test-bottom { flex-direction: column; }
     .spec-frame { width: 100%; }
@@ -245,6 +276,7 @@
   <button id="tab-analysis" role="tab" aria-selected="false">🔬   Analysis</button>
   <button id="tab-train" role="tab" aria-selected="false">🧠   Train</button>
   <button id="tab-test" role="tab" aria-selected="false">✋   Test</button>
+  <button id="tab-results" role="tab" aria-selected="false">📊   Results</button>
 </nav>
 
 <div id="visualizePane" class="pane" role="tabpanel">
@@ -542,6 +574,45 @@ Both are reduced to 2D with PCA. The one whose classes form tighter, more separa
         <div class="bars-title">Model Confidence</div>
         <canvas id="barsCanvas"></canvas>
       </div>
+    </div>
+  </div>
+</div>
+
+<div id="resultsPane" class="pane results-pane" role="tabpanel" hidden>
+  <div class="res-card res-header">
+    <span class="res-heading">Results</span>
+    <span id="resModel" class="res-model-pill">No model loaded.</span>
+    <span id="resClasses" class="res-classes"></span>
+    <span id="resSummary" class="res-summary"></span>
+  </div>
+  <div class="res-middle">
+    <div class="res-card res-matrix">
+      <div class="res-section">Confusion Matrix</div>
+      <div class="res-sub">Each row is what you actually did · each column is what the model guessed</div>
+      <div class="res-sub">Populated from Single Prediction mode only.</div>
+      <canvas id="matrixCanvas"></canvas>
+    </div>
+    <div class="res-right">
+      <div class="res-card res-acc">
+        <div class="res-section">Accuracy per Gesture</div>
+        <div class="res-sub">Green ≥ 70%  ·  Orange ≥ 40%  ·  Red &lt; 40%  ·  shows correct / total</div>
+        <canvas id="accCanvas"></canvas>
+      </div>
+      <div class="res-card"><div class="hint"><span aria-hidden="true">💡</span><span id="resHint"></span></div></div>
+    </div>
+  </div>
+  <div class="res-card res-history">
+    <div class="res-history-head">
+      <span class="res-section">Prediction History</span>
+      <span id="resMsg" class="res-sub"></span>
+      <button id="clearBtn" class="res-clear-btn" disabled>🗑  Clear</button>
+      <button id="exportBtn" class="res-btn" disabled>⬇  Export CSV</button>
+    </div>
+    <div id="historyWrap" class="history-wrap">
+      <table class="history-table">
+        <thead><tr><th>Time</th><th>Mode</th><th>Predicted</th><th>Confidence</th><th>Actual</th><th>Result</th></tr></thead>
+        <tbody id="historyBody"></tbody>
+      </table>
     </div>
   </div>
 </div>

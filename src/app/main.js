@@ -6,6 +6,7 @@ import { initCollect, showCollect } from './collect.js';
 import { initAnalysis, showAnalysis } from './analysis.js';
 import { initTrain, showTrain } from './train.js';
 import { initTest, showTest, hideTest } from './test.js';
+import { initResults, showResults } from './results.js';
 import { connectRadar, disconnectRadar, isConnected, onRadarState, hasWebSerial } from './radar_session.js';
 
 const $ = id => document.getElementById(id);
@@ -18,6 +19,7 @@ const TABS = {
   analysis: { pane: 'analysisPane', show: showAnalysis },
   train: { pane: 'trainPane', show: showTrain },
   test: { pane: 'testPane', show: showTest, hide: hideTest },
+  results: { pane: 'resultsPane', show: showResults },
 };
 function selectTab(name) {
   // Leaving a tab can stop its work (the Test tab stops a running game)
@@ -57,6 +59,7 @@ initVisualize({ status: setStatus });
 initAnalysis();
 initTrain();
 initTest();
+initResults();
 initCollect();
 let start = 'visualize';
 try { start = localStorage.getItem('sensds-tab') || 'visualize'; } catch { /* default tab */ }

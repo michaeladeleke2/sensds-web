@@ -10,7 +10,7 @@
 
 import { subscribeFrames } from './radar_session.js';
 import { currentJetVmin } from './settings.js';
-import { recordPrediction } from './predictions.js';
+import { recordPrediction, announceModel } from './predictions.js';
 import { Maze } from '../test/maze.js';
 import { currentFolder, canChooseFolder, readText, listNames } from '../io/folder.js';
 
@@ -289,6 +289,7 @@ function onModelLoaded({ classes, backend }) {
   fieldReset();
   rebuildConfirmButtons(classes);
   $('confirmBox').hidden = true;
+  announceModel(modelName, classes);                 // model_loaded -> Results tab
 }
 
 function onModelLoadError(msg) {

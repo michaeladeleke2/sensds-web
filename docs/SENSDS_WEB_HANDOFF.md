@@ -42,6 +42,7 @@ Chrome or Edge on Mac, Windows, Linux, Chromebook. Not Safari, Firefox, iPhone, 
 | Analysis tab: physical features, CSV export, PCA comparison | Pass (2026-10-05) | Not yet run |
 | Train tab: fine-tune vit-small in the browser (WebGPU), save Hugging Face model | Pass (2026-10-05, Small; Base runs out of GPU memory on that laptop) | Not yet run |
 | Test tab: load model, Try a Gesture, RoboSoccer, Maze (with radar auto-restart) | Pass (2026-10-05) | Not yet run |
+| Results tab: confusion matrix, accuracy per gesture, history, CSV export | Pass (2026-10-05) | Not yet run |
 
 Board identity read by the Step 1 page:
 
