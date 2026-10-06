@@ -49,9 +49,11 @@ export function framesFromNpy({ data, shape }) {
   };
 }
 
-// Writes a float32 array as a version 1.0 .npy file (C order, little endian).
-export function writeNpyFloat32(data, shape) {
-  let header = `{'descr': '<f4', 'fortran_order': False, 'shape': (${shape.join(', ')}${shape.length === 1 ? ',' : ''}), }`;
+// Writes a Float32Array or Float64Array as a version 1.0 .npy file
+// (C order, little endian), as numpy.save does.
+export function writeNpy(data, shape) {
+  const descr = data instanceof Float64Array ? '<f8' : '<f4';
+  let header = `{'descr': '${descr}', 'fortran_order': False, 'shape': (${shape.join(', ')}${shape.length === 1 ? ',' : ''}), }`;
   const total = 10 + header.length + 1;
   header += ' '.repeat((64 - (total % 64)) % 64) + '\n';     // pad so the data starts on a 64-byte boundary
   const out = new Uint8Array(10 + header.length + data.byteLength);
@@ -60,3 +62,5 @@ export function writeNpyFloat32(data, shape) {
   out.set(new Uint8Array(data.buffer, data.byteOffset, data.byteLength), 10 + header.length);
   return out;
 }
+
+export const writeNpyFloat32 = (data, shape) => writeNpy(data instanceof Float32Array ? data : Float32Array.from(data), shape);

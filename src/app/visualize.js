@@ -5,53 +5,55 @@
 //   - the plot is redrawn on a 200 ms timer (5 Hz) with the newest history,
 //   - history length = max(10, round(time window * 10)) frames,
 //   - changing the time window rebuilds the view after 300 ms (history clears),
-//   - Reduce noise switches jet_vmin between -20 and -50 dB and rebuilds the view.
+//   - Reduce noise switches jet_vmin between -20 and -50 dB and rebuilds the view,
+//   - frames are not processed while the tab is hidden (VisualizeTab.on_raw_frame).
 
 import { LiveDopplerProcessor } from '../dsp/doppler_live.js';
 import { LiveSpectrogramPlot } from '../viz/live_plot.js';
 import { parseNpy, framesFromNpy, writeNpyFloat32 } from '../io/npy.js';
+import { subscribeFrames, isConnected, radarStats, disconnectRadar } from './radar_session.js';
+import { currentJetVmin, getReduceNoise, setReduceNoise, onReduceNoiseChange } from './settings.js';
 
 const FPS = 10;                       // frame_repetition_time_s = 0.1
 const REDRAW_MS = 200;                // ReferenceSpectrogramView._REDRAW_MS
 const REBUILD_MS = 300;               // VisualizeTab._ref_rebuild interval
-const REF_JET_VMIN = -20.0;
-const REDUCED_NOISE_JET_VMIN = -50.0;
 const REF_MAX_SPEED_M_S = 6.19405905;
 const REF_ANTENNA = 0;
 
 const $ = id => document.getElementById(id);
 const canvas = $('plot');
+const pane = $('visualizePane');
+let setStatus = () => {};
 
 const state = {
   timeWindow: 5,
-  reduceNoise: false,
   dims: { nChirp: 128, nSample: 256 },
   proc: null,
   plot: null,
   count: 0,
   pending: null,
-  source: null,          // { name, next(): Float32Array|null, restart(), total? }
+  source: null,          // a playing recording: { name, next(), restart(), total, position }
   paused: false,
-  index: 0,
+  capture: null,         // sensds.saveFrames in progress
 };
 
+const visible = () => !pane.hidden;
 const historyFrames = () => Math.max(10, Math.round(state.timeWindow * FPS));
-const jetVmin = () => (state.reduceNoise ? REDUCED_NOISE_JET_VMIN : REF_JET_VMIN);
 
 // ---------- view (processor + plot), rebuilt like the desktop reference view ----------
 function buildView() {
   const { nChirp, nSample } = state.dims;
   state.proc = new LiveDopplerProcessor({ nSample, nChirp, historyLength: historyFrames() });
-  state.plot = new LiveSpectrogramPlot(canvas, { historyLength: historyFrames(), maxSpeed: REF_MAX_SPEED_M_S, jetVmin: jetVmin() });
+  state.plot = new LiveSpectrogramPlot(canvas, { historyLength: historyFrames(), maxSpeed: REF_MAX_SPEED_M_S, jetVmin: currentJetVmin() });
   state.count = 0;
   state.pending = null;
-  state.plot.drawEmpty();
+  if (visible()) state.plot.drawEmpty();
   updateReadout();
 }
 
 function updateReadout() {
   const frames = state.plot ? state.plot.historyLength : historyFrames();
-  const vmin = state.plot ? state.plot.jetVmin : jetVmin();
+  const vmin = state.plot ? state.plot.jetVmin : currentJetVmin();
   $('readout').textContent =
     `Drawn by       reference script\n` +
     `Antenna        ${REF_ANTENNA}\n` +
@@ -69,51 +71,48 @@ function onFrame(antenna0) {
   state.pending = { history: out.history, count: state.count };   // keep only the newest
 }
 
-function redraw() {
-  if (!state.pending) return;
+setInterval(() => {
+  if (!state.pending || !visible()) return;
   const { history, count } = state.pending;
   state.pending = null;
   state.plot.draw(history, count, state.proc.dopplerFftSize);
-}
-setInterval(redraw, REDRAW_MS);
+}, REDRAW_MS);
 
-// Frame clock: delivers frames at 10 fps without drifting.
+// Live radar frames
+subscribeFrames(cube => {
+  if (state.capture) takeCaptureFrame(cube);
+  if (!visible() || state.source) return;
+  const per = state.dims.nChirp * state.dims.nSample;
+  onFrame(cube.subarray(REF_ANTENNA * per, (REF_ANTENNA + 1) * per));
+  if (state.count % 10 === 0) {
+    const { drops } = radarStats();
+    setStatus(`Radar streaming: frame ${state.count}${drops ? `, ${drops} dropped` : ''}.`);
+  }
+});
+
+// Recording playback: 10 fps without drifting.
 let nextDue = 0;
 function tick() {
   requestAnimationFrame(tick);
-  if (!state.source || state.paused) return;
+  if (!state.source || state.paused || !visible()) return;
   const now = performance.now();
   if (now < nextDue) return;
   nextDue = Math.max(nextDue + 1000 / FPS, now - 1000 / FPS);
   let frame = state.source.next();
   if (!frame) {
-    if ($('loopChk').checked && state.source.restart) { state.source.restart(); frame = state.source.next(); }
-    if (!frame) { setStatus(`${state.source.name}: finished after ${state.count} frames.`); stopSource(false); return; }
+    if ($('loopChk').checked) { state.source.restart(); frame = state.source.next(); }
+    if (!frame) { setStatus(`${state.source.name}: finished after ${state.count} frames.`); stopSource(); return; }
   }
   onFrame(frame);
-  if (state.source.total) setStatus(`${state.source.name}: frame ${state.source.position} of ${state.source.total}`);
+  setStatus(`${state.source.name}: frame ${state.source.position} of ${state.source.total}`);
 }
 requestAnimationFrame(tick);
 
-// ---------- sources ----------
-function startSource(source, dims) {
-  state.source = source;
-  state.paused = false;
-  if (dims.nChirp !== state.dims.nChirp || dims.nSample !== state.dims.nSample) state.dims = dims;
-  buildView();
-  nextDue = performance.now();
-  $('pauseBtn').disabled = false;
+function stopSource() {
+  state.source = null;
+  $('pauseBtn').disabled = true;
   $('pauseBtn').textContent = 'Pause';
 }
-
-function stopSource(clear = true) {
-  if (clear) state.source = null;
-  state.paused = true;
-  $('pauseBtn').disabled = !state.source;
-  $('pauseBtn').textContent = 'Resume';
-}
-
-function setStatus(text) { $('status').textContent = text; }
 
 $('openBtn').onclick = () => $('fileInput').click();
 $('fileInput').onchange = async e => {
@@ -122,15 +121,18 @@ $('fileInput').onchange = async e => {
   if (!file) return;
   try {
     const rec = framesFromNpy(parseNpy(await file.arrayBuffer()));
-    if (radar.device) await disconnectRadar(false);
-    const src = {
-      name: file.name,
-      total: rec.nFrame,
-      position: 0,
-      next() { if (this.position >= rec.nFrame) return null; return rec.antenna0(this.position++); },
+    if (isConnected()) await disconnectRadar();        // a recording takes over the view
+    state.source = {
+      name: file.name, total: rec.nFrame, position: 0,
+      next() { return this.position >= rec.nFrame ? null : rec.antenna0(this.position++); },
       restart() { this.position = 0; },
     };
-    startSource(src, { nChirp: rec.nChirp, nSample: rec.nSample });
+    state.paused = false;
+    state.dims = { nChirp: rec.nChirp, nSample: rec.nSample };
+    buildView();
+    nextDue = performance.now();
+    $('pauseBtn').disabled = false;
+    $('pauseBtn').textContent = 'Pause';
     setStatus(`${file.name}: ${rec.nFrame} frames, ${rec.nAnt} antennas, ${rec.nChirp} chirps, ${rec.nSample} samples`);
   } catch (err) {
     setStatus(`Could not open ${file.name}: ${err.message}`);
@@ -144,87 +146,17 @@ $('pauseBtn').onclick = () => {
   $('pauseBtn').textContent = state.paused ? 'Resume' : 'Pause';
 };
 
-// ---------- live radar ----------
-// The radar code (Strata derived) is loaded only when Connect Radar is clicked,
-// so a published build can leave it out and still play recordings.
-const radar = { device: null, running: false, drops: 0, capture: null };
-const connectBtn = $('connectBtn');
-
-if ('serial' in navigator) {
-  connectBtn.disabled = false;
-  connectBtn.title = 'Connect to the Infineon radar board over USB and show the live spectrogram.';
-} else {
-  connectBtn.title = 'This browser has no Web Serial. Use Chrome or Edge on a computer.';
-}
-
-connectBtn.onclick = () => (radar.device ? disconnectRadar() : connectRadar());
-
-async function connectRadar() {
-  let mod;
-  try { mod = await import('../avian/device.js'); }
-  catch { setStatus('Live radar is not included in this website build yet. Open a recording instead.'); return; }
-
-  let port;
-  try { port = await navigator.serial.requestPort({ filters: [{ usbVendorId: mod.INFINEON_VID }] }); }
-  catch { setStatus('No radar selected.'); return; }
-
-  stopSource();                                    // a playing recording gives way to the radar
-  connectBtn.disabled = true;
-  setStatus('Connecting to the radar…');
-  const device = new mod.RadarDevice(port, { log: m => console.debug('[radar]', m) });
-  try {
-    const { firmware } = await device.open();
-    setStatus(`Radar found: BGT60TR13C, firmware ${firmware}. Starting…`);
-    await device.start();
-  } catch (e) {
-    await device.close().catch(() => {});
-    connectBtn.disabled = false;
-    setStatus(`Could not start the radar: ${e.message}`);
-    return;
-  }
-
-  radar.device = device;
-  radar.running = true;
-  radar.drops = 0;
-  state.dims = { nChirp: device.acq.numChirps, nSample: device.acq.samplesPerChirp };
-  buildView();
-  connectBtn.disabled = false;
-  connectBtn.textContent = 'Disconnect Radar';
-  setStatus('Radar streaming: BGT60TR13C, 3 antennas, 10 frames per second.');
-  radarLoop(mod);
-}
-
-async function radarLoop(mod) {
-  const per = state.dims.nChirp * state.dims.nSample;
-  while (radar.running) {
-    try {
-      const cube = await radar.device.nextFrame();
-      if (!radar.running) break;
-      if (radar.capture) takeCaptureFrame(cube);
-      onFrame(cube.subarray(REF_ANTENNA * per, (REF_ANTENNA + 1) * per));
-      if (state.count % 10 === 0) setStatus(`Radar streaming: frame ${state.count}${radar.drops ? `, ${radar.drops} dropped` : ''}.`);
-    } catch (e) {
-      if (!radar.running) break;
-      // Dropped frames are skipped and streaming continues, as in SensDSv2.
-      if (e instanceof mod.FrameAcquisitionFailed) { radar.drops++; continue; }
-      setStatus(`Radar stopped: ${e.message}`);
-      await disconnectRadar(false);
-      return;
-    }
-  }
-}
-
-// Saving live frames for comparison with the Python reference.
+// ---------- saving live frames for comparison with the Python reference ----------
 // In the browser console: sensds.saveFrames(20)
 function takeCaptureFrame(cube) {
-  const c = radar.capture;
+  const c = state.capture;
   c.frames.push(cube.slice());
   if (c.frames.length < c.n) return;
-  radar.capture = null;
+  state.capture = null;
   const per = c.frames[0].length;
   const all = new Float32Array(per * c.n);
   c.frames.forEach((f, i) => all.set(f, i * per));
-  const blob = new Blob([writeNpyFloat32(all, [c.n, 3, state.dims.nChirp, state.dims.nSample])], { type: 'application/octet-stream' });
+  const blob = new Blob([writeNpyFloat32(all, [c.n, 3, 128, 256])], { type: 'application/octet-stream' });
   const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `browser_frames_${c.n}.npy` });
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 10000);
@@ -233,21 +165,10 @@ function takeCaptureFrame(cube) {
 
 window.sensds = {
   saveFrames(n = 20) {
-    if (!radar.running) return Promise.reject(new Error('Connect the radar first.'));
-    return new Promise(resolve => { radar.capture = { n, frames: [], resolve }; });
+    if (!isConnected()) return Promise.reject(new Error('Connect the radar first.'));
+    return new Promise(resolve => { state.capture = { n, frames: [], resolve }; });
   },
 };
-
-async function disconnectRadar(updateStatus = true) {
-  const device = radar.device;
-  radar.running = false;
-  radar.device = null;
-  connectBtn.disabled = true;
-  if (device) await device.close();
-  connectBtn.disabled = false;
-  connectBtn.textContent = 'Connect Radar';
-  if (updateStatus) setStatus(`Radar disconnected after ${state.count} frames.`);
-}
 
 // ---------- panel controls ----------
 let rebuildTimer = null;
@@ -258,17 +179,34 @@ $('timeSlider').oninput = e => {
   rebuildTimer = setTimeout(buildView, REBUILD_MS);   // a dragged slider rebuilds once
 };
 
-$('noiseChk').onchange = e => { state.reduceNoise = e.target.checked; buildView(); };
+$('noiseChk').checked = getReduceNoise();
+$('noiseChk').onchange = e => setReduceNoise(e.target.checked);
+onReduceNoiseChange(on => { $('noiseChk').checked = on; buildView(); });
 
-$('sizeSel').onchange = e => { applyPlotSize(e.target.value); };
-function applyPlotSize(value) {
+$('sizeSel').onchange = e => {
   // Maximum, not fixed, so the plot still shrinks on a small screen.
-  const [w, h] = value ? value.split('x').map(Number) : [null, null];
+  const [w, h] = e.target.value ? e.target.value.split('x').map(Number) : [null, null];
   canvas.style.maxWidth = w ? `${w}px` : '';
   canvas.style.maxHeight = h ? `${h}px` : '';
   state.plot?.redraw();
+};
+
+new ResizeObserver(() => { if (visible()) state.plot?.redraw(); }).observe(canvas);
+
+export function initVisualize({ status }) {
+  setStatus = status;
+  buildView();
 }
 
-new ResizeObserver(() => state.plot?.redraw()).observe(canvas);
+// Called when the tab is shown again: draw what has been kept.
+export function showVisualize() {
+  state.plot?.redraw();
+  updateReadout();
+}
 
-buildView();
+// Live radar starting: the view starts fresh at the radar's frame size.
+export function onRadarConnected() {
+  stopSource();
+  state.dims = { nChirp: 128, nSample: 256 };
+  buildView();
+}

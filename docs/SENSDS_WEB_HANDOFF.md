@@ -37,7 +37,8 @@ Chrome or Edge on Mac, Windows, Linux, Chromebook. Not Safari, Firefox, iPhone, 
 | Board enumerates as serial (IFX CDC, VID 0x058B, PID 0x0251) | Pass | Pass |
 | Web Serial opens the port | Pass | Pass |
 | Step 1 handshake (board info, version, UUID) | Pass (2026-10-05) | Pass |
-| Live streaming to the Visualize page (configure, stream, stop) | Pass (2026-10-05) | Not yet run |
+| Live streaming to the Visualize page (configure, stream, stop) | Pass (2026-10-05) | Pass (2026-10-05, hosted site) |
+| Collect tab: batch capture saved to a folder | Pass (2026-10-05) | Not yet run |
 
 Board identity read by the Step 1 page:
 

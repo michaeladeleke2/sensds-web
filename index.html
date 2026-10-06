@@ -9,24 +9,25 @@
   :root {
     --bg: #f0f2f5; --panel: #ffffff; --border: #dddddd; --input-bg: #ffffff; --input-border: #cccccc;
     --text: #333333; --subtext: #555555; --faint: #777777; --accent: #1a3a5c; --tab-hover: #e2e8f0;
-    --divider: #eeeeee; --progress-bg: #e0e0e0;
+    --divider: #eeeeee; --progress-bg: #e0e0e0; --hint-bg: #f0f4ff; --hint-text: #888888;
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #1c1c1e; --panel: #2c2c2e; --border: #3c3c3e; --input-bg: #3a3a3a; --input-border: #555555;
       --text: #f0f0f0; --subtext: #b0b0b0; --faint: #888888; --accent: #5b9bd5; --tab-hover: #2a2a2c;
-      --divider: #3c3c3e; --progress-bg: #3a3a3a;
+      --divider: #3c3c3e; --progress-bg: #3a3a3a; --hint-bg: #252535; --hint-text: #a0a0a0;
       color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --bg: #1c1c1e; --panel: #2c2c2e; --border: #3c3c3e; --input-bg: #3a3a3a; --input-border: #555555;
     --text: #f0f0f0; --subtext: #b0b0b0; --faint: #888888; --accent: #5b9bd5; --tab-hover: #2a2a2c;
-    --divider: #3c3c3e; --progress-bg: #3a3a3a;
+    --divider: #3c3c3e; --progress-bg: #3a3a3a; --hint-bg: #252535; --hint-text: #a0a0a0;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { height: 100%; margin: 0; }
   body { background: var(--bg); color: var(--text); font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; display: flex; flex-direction: column; }
 
@@ -39,9 +40,16 @@
   button:disabled { opacity: 0.5; cursor: not-allowed; }
   button.primary { color: var(--accent); font-weight: bold; }
 
+  /* Tab bar (the desktop's QTabWidget) */
+  #tabbar { display: flex; gap: 2px; padding: 0 16px; background: var(--panel); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  #tabbar button { border: none; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; padding: 8px 14px; color: var(--subtext); }
+  #tabbar button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: bold; }
+  #tabbar button:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .pane { flex: 1; display: flex; min-height: 0; }
+  .pane[hidden] { display: none !important; }
+
   /* Visualize tab */
-  #viz { flex: 1; display: flex; min-height: 0; }
-  #panel { width: 300px; flex: none; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--border); padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .side, #panel { width: 300px; flex: none; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--border); padding: 18px; display: flex; flex-direction: column; gap: 8px; }
   .heading { font-size: 16px; font-weight: bold; color: var(--accent); }
   .field-label { font-size: 12px; font-weight: bold; color: var(--subtext); }
   .param-row { display: flex; justify-content: space-between; align-items: baseline; }
@@ -58,10 +66,43 @@
   #plotarea { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 0 16px 6px 8px; }
   #plot { width: 100%; height: 100%; display: block; }
 
+  /* Collect tab (ui/collect_tab.py) */
+  .side { width: 300px; flex: none; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .side input[type=text], .side input[type=number] { font: inherit; width: 100%; color: var(--text); background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 5px; padding: 5px 8px; font-size: 13px; }
+  .side input:focus { border-color: var(--accent); outline: none; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row2 > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .capture-note { font-size: 11px; color: var(--faint); }
+  .capture-warn { font-size: 11px; color: #e67e22; font-weight: bold; }
+  .counts { background: var(--hint-bg); border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+  .counts-title { font-size: 11px; font-weight: bold; color: var(--subtext); }
+  #countsGrid { display: grid; grid-template-columns: 1fr auto; gap: 2px; }
+  .count-name { font-size: 11px; color: var(--subtext); }
+  .count-value { font-size: 11px; font-weight: bold; color: var(--accent); text-align: right; font-variant-numeric: tabular-nums; }
+  .counts-empty { font-size: 11px; color: var(--faint); }
+  .hint { display: flex; gap: 8px; background: var(--hint-bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+  .hint span:last-child { font-size: 12px; color: var(--hint-text); }
+  progress { width: 100%; height: 8px; accent-color: var(--accent); }
+  #collectStatus { min-height: 36px; }
+  .big-btn { border: none; border-radius: 6px; padding: 10px; font-size: 13px; font-weight: bold; color: #fff; }
+  #startBtn { background: var(--accent); }
+  #startBtn:hover { background: #245080; }
+  #stopBtn { background: #c0392b; }
+  #stopBtn:hover { background: #e74c3c; }
+  .preview-side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 20px; }
+  .preview-heading { font-size: 14px; font-weight: bold; color: var(--accent); }
+  .preview-box { flex: 1; min-height: 200px; position: relative; }
+  #previewCanvas { width: 100%; height: 100%; display: block; }
+  #previewPlaceholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; color: var(--faint); font-size: 12px; background: var(--bg); }
+  .bottom-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+  #sampleCount { font-size: 12px; color: var(--faint); min-width: 0; overflow-wrap: anywhere; }
+
   @media (max-width: 700px) {
-    #viz { flex-direction: column; }
-    #panel { width: 100%; border-right: none; border-bottom: 1px solid var(--border); padding: 12px 16px; }
+    .pane { flex-direction: column; }
+    #panel, .side { width: 100%; border-right: none; border-bottom: 1px solid var(--border); padding: 12px 16px; }
     #plotarea { min-height: 360px; padding: 8px 16px; }
+    .preview-side { padding: 12px 16px; }
+    .preview-box { min-height: 300px; }
   }
 </style>
 </head>
@@ -72,11 +113,16 @@
   <button id="openBtn" title="Play a raw capture saved by SensDSv2's Collect tab (sample_NNN_raw.npy), at the radar's 10 frames per second.">Open recording…</button>
   <input id="fileInput" type="file" accept=".npy" hidden>
   <button id="pauseBtn" disabled>Pause</button>
-  <label class="check"><input id="loopChk" type="checkbox" checked> Loop</label>
+  <label class="check" id="loopLabel"><input id="loopChk" type="checkbox" checked> Loop</label>
   <span id="status">No source. Open a recording saved by SensDSv2.</span>
 </div>
 
-<div id="viz">
+<nav id="tabbar" role="tablist">
+  <button id="tab-visualize" role="tab" aria-selected="true">📡   Visualize</button>
+  <button id="tab-collect" role="tab" aria-selected="false">🎙   Collect</button>
+</nav>
+
+<div id="visualizePane" class="pane" role="tabpanel">
   <div id="panel">
     <div class="heading">Visualize</div>
     <hr>
@@ -105,7 +151,59 @@
   <div id="plotarea"><canvas id="plot"></canvas></div>
 </div>
 
-<script type="module" src="src/app/visualize.js"></script>
+<div id="collectPane" class="pane" role="tabpanel" hidden>
+  <div class="side">
+    <div class="heading">Collect Gesture Samples</div>
+    <hr>
+    <label class="field-label" for="studentName">Student Name</label>
+    <input id="studentName" type="text" placeholder="e.g. Alex" autocomplete="off">
+    <label class="field-label" for="gestureLabel">Gesture Label</label>
+    <input id="gestureLabel" type="text" list="gestureList" placeholder="Select or type a label..." autocomplete="off">
+    <datalist id="gestureList"></datalist>
+    <hr>
+    <div class="row2">
+      <div><label class="field-label" for="numSamples"># Samples</label><input id="numSamples" type="number" min="1" max="100" step="1" value="10"></div>
+      <div><label class="field-label" for="duration">Duration (s)</label><input id="duration" type="number" min="1" max="10" step="0.5" value="3.0"></div>
+    </div>
+    <label class="field-label" for="delay">Delay Between Samples (s)</label>
+    <input id="delay" type="number" min="1" max="10" step="1" value="3">
+    <hr>
+    <div class="field-label">Saved Spectrograms</div>
+    <select id="collectMethod">
+      <option value="infineon" selected title="512 bins x 1 column per frame, with the hand's range tracked.&#10;The method the reference script uses.">Infineon SDK</option>
+      <option value="stft" disabled>STFT, not in the web version yet</option>
+    </select>
+    <label class="check" title="Lower the reference drawing's color floor (jet_vmin) from -20&#10;to -50 dB.&#10;&#10;When nothing in a capture reaches -20 dB, as in every idle&#10;capture, the reference script falls back to a floor 40 dB below&#10;the brightest point and the picture fills with noise. At -50 dB&#10;idle stays dark and gestures show more faint detail.&#10;&#10;This changes the saved training images and what the model is&#10;shown live, so keep it the same for a whole dataset."><input id="collectNoise" type="checkbox"> Reduce noise</label>
+    <div class="capture-note" id="captureNote"></div>
+    <div class="capture-warn" id="captureWarn" hidden></div>
+    <hr>
+    <div class="counts">
+      <div class="counts-title" id="countsTitle">Samples on disk</div>
+      <div id="countsGrid"></div>
+      <div class="counts-empty" id="countsEmpty">Enter a name above to see counts.</div>
+    </div>
+    <hr>
+    <div class="hint"><span aria-hidden="true">💡</span><span id="hintText"></span></div>
+    <progress id="collectProgress" value="0" max="10" hidden></progress>
+    <div id="collectStatus"></div>
+    <div class="spacer"></div>
+    <button id="startBtn" class="big-btn">▶  Start Batch Collection</button>
+    <button id="stopBtn" class="big-btn" hidden>■  Stop</button>
+  </div>
+  <div class="preview-side">
+    <div class="preview-heading">Last Captured Gesture</div>
+    <div class="preview-box">
+      <canvas id="previewCanvas"></canvas>
+      <div id="previewPlaceholder">Captured gestures appear here, drawn by the reference script.</div>
+    </div>
+    <div class="bottom-row">
+      <span id="sampleCount">No samples collected yet.</span>
+      <button id="folderBtn" title="Where samples are saved. Choose your SensDSv2_data folder to add to the same dataset the desktop app uses.">📂  Choose Data Folder</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="src/app/main.js"></script>
 <script>
   // If the page script fails to load (a stale cached file, a missing file),
   // say so instead of leaving the controls silently disabled.

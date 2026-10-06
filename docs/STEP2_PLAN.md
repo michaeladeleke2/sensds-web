@@ -6,6 +6,8 @@ Update 2026-10-05: the Visualize page (Steps 4 and 5 for the default Infineon SD
 
 Update 2026-10-05 (later): register list exported with SDK 3.6.4 (38 registers); live radar streams into the Visualize page on the Mac. Step 3 behaviour ported: frame queue of 100 slices with FrameQueueTrimmed, pool of 101 buffers with FramePoolDepleted, dropped frames skipped as SensDSv2 does, FIFO overflow and other errors stop the stream. Numeric frame check: `docs/procedures/validate_frames.md`.
 
+Update 2026-10-05 (later): Collect tab ported (Infineon SDK method). compute_recorded, reference_rgb, Pillow BILINEAR resize and the 400x300 training image are byte-identical to SensDSv2 (tests/collect.test.js, fixtures from reference/python/make_collect_fixtures.py). Procedure: `docs/procedures/collect_samples.md`.
+
 Decisions (2026-10-05):
 
 1. Radar SDK **3.6.4** is the reference (what SensDSv2 runs).
