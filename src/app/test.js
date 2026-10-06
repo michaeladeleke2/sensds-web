@@ -10,9 +10,10 @@
 
 import { subscribeFrames } from './radar_session.js';
 import { currentJetVmin } from './settings.js';
-import { recordPrediction, announceModel } from './predictions.js';
+import { recordPrediction, announceModel, gameEvent } from './predictions.js';
 import { Maze } from '../test/maze.js';
-import { currentFolder, canChooseFolder, readText, listNames } from '../io/folder.js';
+import { canChooseFolder } from '../io/folder.js';
+import { chooseModelFolder } from './model_folder.js';
 
 // ── constants (test_tab.py) ──
 const ROBOT_R = 14, BALL_R = 8, TRAIL_MAX = 40, TICK_MS = 33, INFER_EVERY = 20;
@@ -251,30 +252,15 @@ function ensureWorker() {
 let modelName = '';
 async function loadModel() {
   if (!canChooseFolder()) { setStatus('⚠️ This browser cannot open folders. Use Chrome or Edge on a computer.', '#c0392b'); return; }
-  let dir;
-  try {
-    let startIn;
-    try { startIn = await currentFolder()?.getDirectoryHandle('models'); } catch { startIn = undefined; }
-    dir = await window.showDirectoryPicker({ id: 'sensds-models', startIn, mode: 'read' });
-  } catch { return; }                                                   // closed the picker
+  const picked = await chooseModelFolder();
+  if (!picked) return;
   setStatus('Loading model…', '#e67e22');
   $('modelLbl').textContent = 'Loading…'; $('modelLbl').className = 'model-lbl';
   enableStarts(false);
   try {
-    // The model folder itself, or a <name>_vN folder holding model/
-    let folder = dir;
-    if (!(await readText(dir, 'config.json'))) { try { folder = await dir.getDirectoryHandle('model'); } catch { /* reported below */ } }
-    const configText = await readText(folder, 'config.json');
-    const preprocessorText = await readText(folder, 'preprocessor_config.json');
-    if (!configText) throw new Error(`No config.json in ${dir.name}. Pick the model folder (models/<name>_vN or its model/ folder).`);
-    if (!preprocessorText) throw new Error(`No preprocessor_config.json in ${folder.name}.`);
-    const { files } = await listNames(folder);
-    if (!files.includes('model.safetensors')) {
-      throw new Error(files.includes('pytorch_model.bin') ? 'This model was saved in the older PyTorch .bin format, which the browser cannot read. Retrain it (or re-save it with safetensors).' : `No model.safetensors in ${folder.name}.`);
-    }
-    const weights = await (await (await folder.getFileHandle('model.safetensors')).getFile()).arrayBuffer();
-    modelName = folder.name === 'model' && dir.name !== 'model' ? dir.name : folder.name;
-    ensureWorker().postMessage({ type: 'load', files: { configText, preprocessorText, weights } }, [weights]);
+    const { name, files } = await picked.read();
+    modelName = name;
+    ensureWorker().postMessage({ type: 'load', files }, [files.weights]);
   } catch (e) { onModelLoadError(e.message); }
 }
 
@@ -438,6 +424,7 @@ function onMazeWon() {
   st.mazesSolved += 1;
   $('solvedLbl').textContent = `Solved: ${st.mazesSolved}`;
   setStatus(`🎉 Maze #${maze.mazeNum} done in ${maze.moves} moves! ${'⭐'.repeat(maze.starRating)}  Press ↺ New Maze to keep going.`, '#27ae60');
+  gameEvent({ type: 'maze', stars: maze.starRating, moves: maze.moves });
 }
 function setDifficulty(idx) {
   st.mazeDifficulty = idx;
@@ -499,10 +486,12 @@ function onInferenceResult(probs, mode, fromCache, image) {
     $('captureBtn').disabled = false;
     animateSingle(best);
     $('confirmBox').hidden = false;
+    gameEvent({ type: 'prediction', gesture: best, confidence: conf });
   } else if (mode === 'robosoccer') {
     if (conf >= threshold && best !== 'idle') {
       recordPrediction(best, conf, threshold, best, 'RoboSoccer');
       applyRsGesture(best);
+      gameEvent({ type: 'soccer', gesture: best });
       st.cacheProbs = {}; st.cacheRemaining = 0;
     } else {
       recordPrediction(best, conf, threshold, null, 'RoboSoccer');

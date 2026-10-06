@@ -7,6 +7,9 @@ import { initAnalysis, showAnalysis } from './analysis.js';
 import { initTrain, showTrain } from './train.js';
 import { initTest, showTest, hideTest } from './test.js';
 import { initResults, showResults } from './results.js';
+import { initCurveFit, showCurveFit } from './curvefit.js';
+import { initVex, showVex, hideVex } from './vex.js';
+import { initGamification } from './gamification.js';
 import { connectRadar, disconnectRadar, isConnected, onRadarState, hasWebSerial } from './radar_session.js';
 
 const $ = id => document.getElementById(id);
@@ -19,9 +22,11 @@ const TABS = {
   visualize: { pane: 'visualizePane', show: showVisualize },
   collect: { pane: 'collectPane', show: showCollect },
   analysis: { pane: 'analysisPane', show: showAnalysis },
+  curvefit: { pane: 'curvefitPane', show: showCurveFit },
   train: { pane: 'trainPane', show: showTrain },
   test: { pane: 'testPane', show: showTest, hide: hideTest },
   results: { pane: 'resultsPane', show: showResults },
+  vex: { pane: 'vexPane', show: showVex, hide: hideVex },
 };
 function selectTab(name) {
   // Leaving a tab can stop its work (the Test tab stops a running game)
@@ -61,6 +66,9 @@ initAnalysis();
 initTrain();
 initTest();
 initResults();
+initCurveFit();
+initVex();
+initGamification();
 initCollect();
 let start = 'visualize';
 try { start = localStorage.getItem('sensds-tab') || 'visualize'; } catch { /* default tab */ }

@@ -11,6 +11,8 @@ The parts come under different licences:
 | SensDSv2 reference script (`core/doppler_spectrogram_live.py`) | The project owner's own code | `src/dsp/doppler_live.js`, `src/viz/live_plot.js` |
 | scipy (window functions) | BSD 3-Clause | `src/dsp/windows.js` |
 | matplotlib (jet colormap, tick placement, image resampling) | Matplotlib License (BSD-style) | `src/viz/jet.js`, `src/viz/ticks.js`, `src/viz/image.js` |
+| SensDSv2 Curve Fit, VEX AIM tab, gamification (`core/curve_fit.py`, `ui/vex_aim_tab.py`, `ui/gamification.py`) | The project owner's own code | `src/curvefit/fit.js`, `src/app/curvefit.js`, `src/app/vex.js`, `src/gamification/manager.js`, `src/app/gamification.js` |
+| VEX AIM WebSocket client (`vex/aim.py`, `vex/vex_messages.py`, Copyright (c) Innovation First 2025) | MIT | `src/vex/aim_client.js` (the wire format of the commands the tab sends; the copyright notice is kept in its header) |
 
 Every Strata-derived file starts with a `STRATA DERIVED` comment.
 

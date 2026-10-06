@@ -338,6 +338,114 @@
     .side, #panel, .detail { width: 100%; }
     #plotarea { padding: 12px 16px; }
   }
+
+  /* ══════════ Two-row app bar: brand and status above, the eight tabs below ══════════ */
+  #appbar { flex-wrap: wrap; row-gap: 6px; padding: 10px 20px 0; }
+  #tabbar { order: 3; flex-basis: 100%; margin: 0 -6px; padding: 2px 4px 8px; }
+  .primary-btn { color: var(--on-accent); border-radius: 10px; }
+  .primary-btn:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
+  .primary-btn.checked { background: #c0392b; color: #fff; }
+
+  /* Level chip (GamificationBar) */
+  .gami-chip { display: flex; align-items: center; gap: 12px; padding: 5px 12px; border-radius: 999px; background: var(--input-bg); border: 1px solid var(--border); }
+  .gami-chip:hover:not(:disabled) { background: var(--tab-hover); }
+  .gami-col { display: flex; flex-direction: column; gap: 3px; min-width: 128px; }
+  .gami-level { --level-color: #95a5a6; font-size: 11.5px; font-weight: 700; color: var(--level-color); text-align: left; white-space: nowrap; line-height: 1.1; transition: color .2s; }
+  .gami-level.level-up { color: #f39c12; }
+  .gami-xp-row { display: flex; align-items: center; gap: 6px; }
+  .gami-xp { flex: 1; height: 5px; border-radius: 999px; background: var(--progress-bg); overflow: hidden; }
+  .gami-xp > span { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #3498db, #9b59b6); transition: width .4s ease; }
+  .gami-xp-text { font-size: 10px; color: var(--faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .gami-badges { font-size: 12.5px; font-weight: 700; color: #e08e0b; white-space: nowrap; }
+
+  /* Badge toast (BadgeToast): slides in from the top right */
+  .badge-toast { position: fixed; top: 108px; right: 16px; z-index: 50; width: min(300px, calc(100vw - 32px)); display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: #13294a; border: 2px solid #f39c12; box-shadow: 0 8px 24px rgba(0,0,0,.25); transform: translateY(-160px); opacity: 0; transition: transform .38s cubic-bezier(.2,.8,.2,1), opacity .3s; }
+  .badge-toast.in { transform: none; opacity: 1; }
+  .toast-icon { font-size: 28px; }
+  .toast-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .toast-title { font-size: 13px; font-weight: 700; color: #f39c12; }
+  .toast-desc { font-size: 12px; color: #ecf0f1; }
+  @media (prefers-reduced-motion: reduce) { .badge-toast { transition: opacity .2s; transform: none; } }
+
+  /* Badge list (the desktop's "View All" panel) */
+  .badge-dialog { width: min(480px, calc(100vw - 32px)); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; background: var(--panel); color: var(--text); box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+  .badge-dialog::backdrop { background: rgba(8, 15, 30, .45); }
+  .badge-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+  .badge-title { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+  .badge-xp { font-size: 12px; font-weight: 600; color: var(--subtext); background: var(--input-bg); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
+  .badge-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: min(60vh, 520px); overflow-y: auto; }
+  .badge-row { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--input-bg); }
+  .badge-row .badge-icon { font-size: 22px; width: 30px; text-align: center; filter: grayscale(1); opacity: .45; }
+  .badge-row.earned { border-color: #f39c12; background: var(--accent-soft); }
+  .badge-row.earned .badge-icon { filter: none; opacity: 1; }
+  .badge-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .badge-name { font-size: 13px; font-weight: 700; color: var(--faint); }
+  .badge-row.earned .badge-name { color: #e08e0b; }
+  .badge-desc { font-size: 12px; color: var(--faint); }
+  .badge-check { font-size: 12px; font-weight: 700; color: var(--ok); white-space: nowrap; }
+  .badge-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+
+  /* Curve Fit tab */
+  .cf-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 20px; }
+  .cf-plot-wrap { flex: 3; min-height: 240px; position: relative; border-radius: var(--radius); box-shadow: var(--shadow); background: var(--panel); overflow: hidden; }
+  .cf-plot-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .cf-fit-row { flex: 2; min-height: 200px; display: flex; gap: 12px; }
+  .cf-fit-wrap { flex: 3; min-width: 0; position: relative; border-radius: var(--radius); box-shadow: var(--shadow); background: var(--panel); overflow: hidden; }
+  .cf-fit-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .cf-readout { flex: 2; min-width: 0; overflow: auto; border-radius: var(--radius); box-shadow: var(--shadow); background: var(--panel); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .cf-equation, .cf-physics { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.5 Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace; color: var(--text); }
+  .cf-physics { font-size: 12px; color: var(--subtext); padding-top: 10px; border-top: 1px solid var(--divider); }
+  .cf-range { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; }
+  .cf-range label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--faint); }
+  .cf-range input { width: 100%; height: 36px; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text); font: inherit; font-size: 14px; }
+  .cf-curves-row { display: grid; grid-template-columns: 1fr 76px; gap: 8px; align-items: center; margin-top: 4px; }
+  .cf-freqs { display: flex; flex-direction: column; gap: 6px; }
+  .cf-freq-row { display: grid; grid-template-columns: 1fr 96px auto; gap: 8px; align-items: center; font-size: 13px; color: var(--subtext); }
+  .cf-freq-row input { width: 100%; height: 34px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text); font: inherit; font-size: 13px; }
+  .cf-unit { font-size: 12px; color: var(--faint); }
+  .cf-status { font-size: 12px; color: var(--subtext); white-space: pre-wrap; }
+  .cf-status.err { color: var(--bad); font-weight: 700; }
+
+  /* VEX AIM tab */
+  .side input[type=text] { width: 100%; }
+  .vex-conn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .vex-connect-btn, .vex-disconnect-btn { border: none; border-radius: 10px; padding: 9px 10px; font-weight: 700; color: #fff; }
+  .vex-connect-btn { background: #1f9d55; }
+  .vex-disconnect-btn { background: #c0392b; }
+  .vex-connect-btn:hover:not(:disabled) { background: #1f9d55; filter: brightness(1.1); }
+  .vex-disconnect-btn:hover:not(:disabled) { background: #c0392b; filter: brightness(1.1); }
+  .vex-connect-btn:disabled, .vex-disconnect-btn:disabled { background: var(--progress-bg); color: var(--faint); }
+  .vex-robot-status { font-size: 12px; color: var(--faint); }
+  .vex-robot-status.busy { color: #e67e22; } .vex-robot-status.ok { color: var(--ok); } .vex-robot-status.bad { color: var(--bad); }
+  .model-lbl.busy { color: #e67e22; }
+  .vex-stop-btn { background: #c0392b; color: #fff; }
+  .vex-stop-btn:hover:not(:disabled) { background: #c0392b; }
+  .vex-hints ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 6px; color: var(--hint-text); font-size: 12.5px; line-height: 1.45; }
+  .vex-log { margin: 0; min-height: 140px; max-height: 260px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: #0d1117; color: #39d353; border: 1px solid #30363d; border-radius: 10px; padding: 8px 10px; font: 11px/1.5 Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace; }
+  .vex-blocked { font-size: 12.5px; line-height: 1.5; border: 1px solid var(--warn); border-radius: 10px; padding: 8px 12px; background: var(--accent-soft); }
+  .vex-blocked summary { font-weight: 700; cursor: pointer; color: var(--warn); }
+  .vex-blocked ol { padding-left: 18px; margin: 6px 0 0; display: flex; flex-direction: column; gap: 6px; }
+  .vex-blocked p { margin: 6px 0 0; }
+  .vex-blocked code { font-size: 11.5px; overflow-wrap: anywhere; }
+  .vex-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 20px; }
+  .vex-plot-wrap { flex: 2; min-height: 220px; position: relative; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; background: #fff; }
+  .vex-plot-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #vexGestureBar #vexGbText { flex: 1; }
+  #vexGestureBar #vexGbCountdown { width: 46px; text-align: right; font-size: 14px; font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace; }
+  .vex-pred { flex: 1; min-height: 140px; border-radius: var(--radius); box-shadow: var(--shadow); background: var(--panel); padding: 16px 20px; display: flex; flex-direction: column; gap: 6px; }
+  .vex-pred-title { font-size: 13px; font-weight: 700; color: var(--accent); }
+  .vex-pred-gesture { font-family: var(--font-display); font-size: 32px; font-weight: 700; color: var(--text); text-transform: capitalize; }
+  .vex-pred-details { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 14px; color: var(--subtext); }
+  .vex-pred-cmd { color: var(--ok); font-weight: 700; }
+
+  #tabbar { flex-wrap: wrap; overflow: visible; }
+  .vex-plot-wrap { flex: 3; min-height: 320px; }
+  @media (max-width: 1100px) { .brand-sub { display: none; } .gami-xp-text { display: none; } .gami-col { min-width: 96px; } }
+  @media (max-width: 900px) {
+    .cf-fit-row { flex-direction: column; }
+    .gami-col { display: none; }
+    .badge-toast { top: 150px; }
+  }
 </style>
 </head>
 <body>
@@ -350,11 +458,17 @@
     <button id="tab-visualize" role="tab" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h3l3-8 4 16 3-8h5"/></svg>Visualize</button>
     <button id="tab-collect" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>Collect</button>
     <button id="tab-analysis" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="16" r="1.6"/><circle cx="11" cy="9" r="1.6"/><circle cx="16" cy="13" r="1.6"/><circle cx="18" cy="6" r="1.6"/><path d="M3 3v18h18"/></svg>Analysis</button>
+    <button id="tab-curvefit" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12c2.5-7 5-7 7.5 0s5 7 7.5 0 3-5 5-3"/></svg>Curve Fit</button>
     <button id="tab-train" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 10h4v4h-4z"/></svg>Train</button>
     <button id="tab-test" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.8" fill="currentColor"/></svg>Test</button>
     <button id="tab-results" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-7"/></svg>Results</button>
+    <button id="tab-vex" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V4.5M9.5 4h5"/><circle cx="9.5" cy="13.5" r="1.2" fill="currentColor"/><circle cx="14.5" cy="13.5" r="1.2" fill="currentColor"/><path d="M2.5 12.5v3M21.5 12.5v3"/></svg>VEX AIM</button>
   </nav>
   <div class="appbar-right">
+    <button id="gamiChip" class="gami-chip" type="button" aria-haspopup="dialog" aria-label="Level, XP and badges">
+      <span class="gami-col"><span id="gamiLevel" class="gami-level">Level 1 · Beginner</span><span class="gami-xp-row"><span class="gami-xp"><span id="gamiXpFill"></span></span><span id="gamiXpText" class="gami-xp-text">XP: 0 / 100</span></span></span>
+      <span class="gami-badges">🏅 <span id="gamiBadgeCount">0</span></span>
+    </button>
     <div id="radarChip" class="radar-chip"><span class="radar-dot" aria-hidden="true"></span><span id="status" role="status">No source. Open a recording saved by SensDSv2.</span></div>
     <button id="connectBtn" class="btn-primary" disabled title="Live radar needs Chrome or Edge on a computer.">Connect Radar</button>
   </div>
@@ -545,6 +659,54 @@ Both are reduced to 2D with PCA. The one whose classes form tighter, more separa
   </div>
 </div>
 
+<div id="curvefitPane" class="pane" role="tabpanel" hidden>
+  <div class="side">
+    <div class="heading">Curve Fitting</div>
+    <div class="desc">Freeze the spectrogram, trace the ridge a moving target leaves, then fit sinusoids to it. A swinging pendulum's frequency predicts its length.</div>
+    <hr>
+    <div class="field-label">Capture</div>
+    <button id="cfFreezeBtn" class="primary-btn">❄  Freeze</button>
+    <button id="cfResumeBtn" class="minor-btn" disabled>▶  Resume</button>
+    <hr>
+    <div class="field-label">Time Axis</div>
+    <div class="param-row"><span class="param-name">Time window</span><span class="param-value" id="cfWindowValue">5 s</span></div>
+    <input id="cfWindow" type="range" min="2" max="30" value="5" title="Seconds of radar history captured across the plot.&#10;Changing it clears the picture and the trace.">
+    <div id="cfWindowNote" class="desc" hidden>Resume to change the window.</div>
+    <div class="cf-range">
+      <label>From<input id="cfFrom" type="number" min="0" step="0.5" value="0"></label>
+      <label>To<input id="cfTo" type="number" min="0" step="0.5" value="5"></label>
+      <button id="cfViewReset" class="minor-btn" title="Show the whole window">Reset</button>
+    </div>
+    <div class="desc">Scroll on the plot to zoom the time axis; drag to pan.</div>
+    <hr>
+    <div class="field-label">Trace</div>
+    <button id="cfTraceBtn" class="primary-btn">✎  Start Trace</button>
+    <button id="cfClearBtn" class="minor-btn" disabled>✕  Clear Trace</button>
+    <label class="check" title="Move each traced point onto the brightest bin near it before&#10;fitting, so the fit follows the signal rather than how steady&#10;your hand was."><input id="cfSnap" type="checkbox" checked> Snap to strongest signal</label>
+    <hr>
+    <div class="field-label">Model</div>
+    <label class="check"><input type="radio" name="cfModel" id="cfModelSine" checked> Sinusoid</label>
+    <label class="check"><input type="radio" name="cfModel" id="cfModelDamped"> Damped sinusoid</label>
+    <div class="cf-curves-row">
+      <label class="field-label" for="cfCurves">Number of sinusoids</label>
+      <select id="cfCurves" title="Fit a sum of this many sinusoids plus an offset.&#10;Use more than one when the trace mixes several swings."><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+    </div>
+    <div id="cfFreqs" class="cf-freqs"></div>
+    <div class="desc">Leave a starting frequency blank and the fit finds it.</div>
+    <button id="cfFitBtn" class="primary-btn" disabled>📈  Fit Curve</button>
+    <div id="cfStatus" class="cf-status" role="status"></div>
+  </div>
+  <div class="cf-main">
+    <div class="section-heading" id="cfSpecHeading">Live Spectrogram</div>
+    <div id="cfPlotWrap" class="cf-plot-wrap"><canvas id="cfPlot"></canvas></div>
+    <div class="section-heading">Fitted Curve</div>
+    <div class="cf-fit-row">
+      <div class="cf-fit-wrap"><canvas id="cfFitPlot"></canvas></div>
+      <div class="cf-readout"><pre id="cfEquation" class="cf-equation"></pre><pre id="cfPhysics" class="cf-physics" hidden></pre></div>
+    </div>
+  </div>
+</div>
+
 <div id="trainPane" class="pane" role="tabpanel" hidden>
   <div class="side">
     <div class="heading">Train Model</div>
@@ -705,6 +867,68 @@ Both are reduced to 2D with PCA. The one whose classes form tighter, more separa
     </div>
   </div>
 </div>
+
+<div id="vexPane" class="pane" role="tabpanel" hidden>
+  <div class="side">
+    <div class="heading">VEX AIM Control</div>
+    <hr>
+    <label class="field-label" for="vexIp">Robot IP Address</label>
+    <input id="vexIp" type="text" value="192.168.4.1" placeholder="192.168.4.1" spellcheck="false">
+    <div class="vex-conn-row">
+      <button id="vexConnectBtn" class="vex-connect-btn">Connect</button>
+      <button id="vexDisconnectBtn" class="vex-disconnect-btn" disabled>Disconnect</button>
+    </div>
+    <div id="vexRobotStatus" class="vex-robot-status">⬤  Not connected</div>
+    <hr>
+    <button id="vexLoadBtn" class="load-model-btn" title="Pick a trained model folder (models/&lt;name&gt;_vN in your data folder).">📂  Load Model</button>
+    <div id="vexModelLbl" class="model-lbl">No model loaded.</div>
+    <hr>
+    <div class="field-label">Mode</div>
+    <label class="check"><input type="radio" name="vexMode" id="vexModeSingle" checked> Single Command</label>
+    <label class="check"><input type="radio" name="vexMode" id="vexModeRs"> RoboSoccer</label>
+    <label class="field-label" for="vexThreshold">Confidence Threshold</label>
+    <input id="vexThreshold" type="number" min="0.1" max="1" step="0.05" value="0.60">
+    <div id="vexDurBox" class="mode-controls">
+      <label class="field-label" for="vexDuration">Capture Duration (s)</label>
+      <input id="vexDuration" type="number" min="1" max="10" step="0.5" value="3.0">
+    </div>
+    <button id="vexStartBtn" class="primary-btn" disabled>▶  Start</button>
+    <button id="vexStopBtn" class="primary-btn vex-stop-btn" hidden>■  Stop</button>
+    <hr>
+    <div class="hint vex-hints"><span aria-hidden="true">💡</span><ul id="vexHints"></ul></div>
+    <div class="field-label">Status Log</div>
+    <pre id="vexLog" class="vex-log" role="log" aria-live="polite"></pre>
+    <details id="vexBlocked" class="vex-blocked" hidden open>
+      <summary>Connecting from the website</summary>
+      <p>Chrome asks before a website talks to devices on your local network, such as the robot.</p>
+      <ol>
+        <li>When Chrome asks to let this site <b>look for and connect to any device on your local network</b>, choose <b>Allow</b>.</li>
+        <li>No prompt, or blocked it before? Click the icon left of the address bar, open <b>Site settings</b>, set <b>Local network access</b> to <b>Allow</b>, reload, then Connect again. Site: <code id="vexOrigin"></code></li>
+        <li>Still blocked? Run the app on this computer (<code>npm start</code>, then open http://localhost:8765).</li>
+      </ol>
+    </details>
+  </div>
+  <div class="vex-main">
+    <div id="vexPlotWrap" class="vex-plot-wrap"><canvas id="vexPlot"></canvas></div>
+    <div id="vexGestureBar" class="gesture-bar" hidden><span id="vexGbIcon"></span><span id="vexGbText"></span><span id="vexGbCountdown"></span></div>
+    <div class="vex-pred">
+      <div class="vex-pred-title">Last Prediction</div>
+      <div id="vexPredGesture" class="vex-pred-gesture">—</div>
+      <div class="vex-pred-details"><span id="vexPredConf">Confidence: not yet</span><span id="vexPredCmd" class="vex-pred-cmd">Command sent: none yet</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="badgeToast" class="badge-toast" role="status" aria-live="polite" hidden>
+  <span id="toastIcon" class="toast-icon">🏅</span>
+  <span class="toast-text"><span id="toastTitle" class="toast-title">Badge Earned!</span><span id="toastDesc" class="toast-desc"></span></span>
+</div>
+
+<dialog id="badgeDialog" class="badge-dialog" aria-labelledby="badgeTitle">
+  <div class="badge-head"><span id="badgeTitle" class="badge-title">🏅  Your Badges</span><span id="badgeXp" class="badge-xp"></span></div>
+  <ul id="badgeList" class="badge-list"></ul>
+  <div class="badge-foot"><span class="desc">Earn XP in the Test tab: predictions, RoboSoccer and mazes. Progress lasts until the page is closed.</span><button id="badgeClose" class="btn-primary">Close</button></div>
+</dialog>
 
 <script type="module" src="src/app/main.js"></script>
 <script>

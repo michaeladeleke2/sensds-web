@@ -1,0 +1,1034 @@
+{
+ "commands": [
+  "{\"cmd_id\":\"program_init\"}",
+  "{\"cmd_id\":\"drive_for\",\"distance\":500,\"angle\":0,\"final_heading\":0,\"drive_speed\":100,\"turn_speed\":75,\"stacking_type\":0}",
+  "{\"cmd_id\":\"turn_for\",\"angle\":-30,\"turn_rate\":75,\"stacking_type\":0}",
+  "{\"cmd_id\":\"turn_for\",\"angle\":30,\"turn_rate\":75,\"stacking_type\":0}",
+  "{\"cmd_id\":\"kick_hard\"}",
+  "{\"cmd_id\":\"drive\",\"angle\":0,\"speed\":0,\"stacking_type\":0}",
+  "{\"cmd_id\":\"turn\",\"turn_rate\":0,\"stacking_type\":0}"
+ ],
+ "badges": {
+  "events": [
+   [
+    "prediction",
+    "push",
+    0.55
+   ],
+   [
+    "prediction",
+    "push",
+    0.55
+   ],
+   [
+    "prediction",
+    "push",
+    0.55
+   ],
+   [
+    "prediction",
+    "push",
+    0.55
+   ],
+   [
+    "prediction",
+    "idle",
+    0.91
+   ],
+   [
+    "soccer",
+    "swipe_left"
+   ],
+   [
+    "soccer",
+    "swipe_left"
+   ],
+   [
+    "soccer",
+    "swipe_left"
+   ],
+   [
+    "soccer",
+    "swipe_left"
+   ],
+   [
+    "soccer",
+    "swipe_left"
+   ],
+   [
+    "soccer",
+    "swipe_left"
+   ],
+   [
+    "soccer",
+    "swipe_left"
+   ],
+   [
+    "soccer",
+    "swipe_left"
+   ],
+   [
+    "soccer",
+    "swipe_left"
+   ],
+   [
+    "soccer",
+    "swipe_left"
+   ],
+   [
+    "maze",
+    3,
+    14
+   ],
+   [
+    "maze",
+    2,
+    9
+   ],
+   [
+    "maze",
+    1,
+    30
+   ],
+   [
+    "maze",
+    3,
+    10
+   ],
+   [
+    "maze",
+    2,
+    22
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ],
+   [
+    "prediction",
+    "push",
+    0.4
+   ]
+  ],
+  "states": [
+   {
+    "xp": 10,
+    "level": 0,
+    "badges": [
+     "first_prediction"
+    ],
+    "range": [
+     0,
+     100
+    ]
+   },
+   {
+    "xp": 20,
+    "level": 0,
+    "badges": [
+     "first_prediction"
+    ],
+    "range": [
+     0,
+     100
+    ]
+   },
+   {
+    "xp": 30,
+    "level": 0,
+    "badges": [
+     "first_prediction"
+    ],
+    "range": [
+     0,
+     100
+    ]
+   },
+   {
+    "xp": 40,
+    "level": 0,
+    "badges": [
+     "first_prediction"
+    ],
+    "range": [
+     0,
+     100
+    ]
+   },
+   {
+    "xp": 50,
+    "level": 0,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five"
+    ],
+    "range": [
+     0,
+     100
+    ]
+   },
+   {
+    "xp": 65,
+    "level": 0,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "soccer_rookie"
+    ],
+    "range": [
+     0,
+     100
+    ]
+   },
+   {
+    "xp": 80,
+    "level": 0,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "soccer_rookie"
+    ],
+    "range": [
+     0,
+     100
+    ]
+   },
+   {
+    "xp": 95,
+    "level": 0,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "soccer_rookie"
+    ],
+    "range": [
+     0,
+     100
+    ]
+   },
+   {
+    "xp": 110,
+    "level": 1,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "soccer_rookie"
+    ],
+    "range": [
+     100,
+     300
+    ]
+   },
+   {
+    "xp": 125,
+    "level": 1,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "soccer_rookie"
+    ],
+    "range": [
+     100,
+     300
+    ]
+   },
+   {
+    "xp": 140,
+    "level": 1,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "soccer_rookie"
+    ],
+    "range": [
+     100,
+     300
+    ]
+   },
+   {
+    "xp": 155,
+    "level": 1,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "soccer_rookie"
+    ],
+    "range": [
+     100,
+     300
+    ]
+   },
+   {
+    "xp": 170,
+    "level": 1,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "soccer_rookie"
+    ],
+    "range": [
+     100,
+     300
+    ]
+   },
+   {
+    "xp": 185,
+    "level": 1,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "soccer_rookie"
+    ],
+    "range": [
+     100,
+     300
+    ]
+   },
+   {
+    "xp": 200,
+    "level": 1,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "soccer_pro",
+     "soccer_rookie"
+    ],
+    "range": [
+     100,
+     300
+    ]
+   },
+   {
+    "xp": 240,
+    "level": 1,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "three_stars"
+    ],
+    "range": [
+     100,
+     300
+    ]
+   },
+   {
+    "xp": 270,
+    "level": 1,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     100,
+     300
+    ]
+   },
+   {
+    "xp": 295,
+    "level": 1,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     100,
+     300
+    ]
+   },
+   {
+    "xp": 335,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 365,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 375,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 385,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 395,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 405,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 415,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 425,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 435,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 445,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 455,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 465,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 475,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 485,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 495,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 505,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 515,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "on_fire",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   },
+   {
+    "xp": 525,
+    "level": 2,
+    "badges": [
+     "confident_one",
+     "first_prediction",
+     "high_five",
+     "maze_explorer",
+     "maze_master",
+     "maze_rookie",
+     "on_fire",
+     "soccer_pro",
+     "soccer_rookie",
+     "speed_run",
+     "three_stars"
+    ],
+    "range": [
+     300,
+     600
+    ]
+   }
+  ],
+  "signals": [
+   [
+    "xp",
+    10,
+    0
+   ],
+   [
+    "badge",
+    "first_prediction"
+   ],
+   [
+    "xp",
+    20,
+    0
+   ],
+   [
+    "xp",
+    30,
+    0
+   ],
+   [
+    "xp",
+    40,
+    0
+   ],
+   [
+    "xp",
+    50,
+    0
+   ],
+   [
+    "badge",
+    "high_five"
+   ],
+   [
+    "badge",
+    "confident_one"
+   ],
+   [
+    "xp",
+    65,
+    0
+   ],
+   [
+    "badge",
+    "soccer_rookie"
+   ],
+   [
+    "xp",
+    80,
+    0
+   ],
+   [
+    "xp",
+    95,
+    0
+   ],
+   [
+    "xp",
+    110,
+    1
+   ],
+   [
+    "level_up",
+    1
+   ],
+   [
+    "xp",
+    125,
+    1
+   ],
+   [
+    "xp",
+    140,
+    1
+   ],
+   [
+    "xp",
+    155,
+    1
+   ],
+   [
+    "xp",
+    170,
+    1
+   ],
+   [
+    "xp",
+    185,
+    1
+   ],
+   [
+    "xp",
+    200,
+    1
+   ],
+   [
+    "badge",
+    "soccer_pro"
+   ],
+   [
+    "xp",
+    240,
+    1
+   ],
+   [
+    "badge",
+    "maze_rookie"
+   ],
+   [
+    "badge",
+    "three_stars"
+   ],
+   [
+    "xp",
+    270,
+    1
+   ],
+   [
+    "badge",
+    "speed_run"
+   ],
+   [
+    "xp",
+    295,
+    1
+   ],
+   [
+    "badge",
+    "maze_explorer"
+   ],
+   [
+    "xp",
+    335,
+    2
+   ],
+   [
+    "level_up",
+    2
+   ],
+   [
+    "xp",
+    365,
+    2
+   ],
+   [
+    "badge",
+    "maze_master"
+   ],
+   [
+    "xp",
+    375,
+    2
+   ],
+   [
+    "xp",
+    385,
+    2
+   ],
+   [
+    "xp",
+    395,
+    2
+   ],
+   [
+    "xp",
+    405,
+    2
+   ],
+   [
+    "xp",
+    415,
+    2
+   ],
+   [
+    "xp",
+    425,
+    2
+   ],
+   [
+    "xp",
+    435,
+    2
+   ],
+   [
+    "xp",
+    445,
+    2
+   ],
+   [
+    "xp",
+    455,
+    2
+   ],
+   [
+    "xp",
+    465,
+    2
+   ],
+   [
+    "xp",
+    475,
+    2
+   ],
+   [
+    "xp",
+    485,
+    2
+   ],
+   [
+    "xp",
+    495,
+    2
+   ],
+   [
+    "xp",
+    505,
+    2
+   ],
+   [
+    "xp",
+    515,
+    2
+   ],
+   [
+    "badge",
+    "on_fire"
+   ],
+   [
+    "xp",
+    525,
+    2
+   ]
+  ]
+ }
+}

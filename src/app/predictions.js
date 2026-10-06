@@ -14,3 +14,10 @@ export const onPrediction = fn => listeners.add(fn);
 
 export function announceModel(name, classes) { for (const fn of modelListeners) fn(name, classes); }
 export const onModelLoaded = fn => modelListeners.add(fn);
+
+// Game events for the badges (TestTab.gesture_tested, soccer_gesture_applied
+// and maze_solved): { type: 'prediction', gesture, confidence },
+// { type: 'soccer', gesture } or { type: 'maze', stars, moves }
+const gameListeners = new Set();
+export function gameEvent(e) { for (const fn of gameListeners) fn(e); }
+export const onGameEvent = fn => gameListeners.add(fn);

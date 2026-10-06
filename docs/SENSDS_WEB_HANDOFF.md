@@ -43,6 +43,9 @@ Chrome or Edge on Mac, Windows, Linux, Chromebook. Not Safari, Firefox, iPhone, 
 | Train tab: fine-tune vit-small in the browser (WebGPU), save Hugging Face model | Pass (2026-10-05, Small; Base runs out of GPU memory on that laptop) | Not yet run |
 | Test tab: load model, Try a Gesture, RoboSoccer, Maze (with radar auto-restart) | Pass (2026-10-05) | Not yet run |
 | Results tab: confusion matrix, accuracy per gesture, history, CSV export | Pass (2026-10-05) | Not yet run |
+| Curve Fit tab: freeze, trace, fit 1 to 4 sinusoids (team feedback applied) | Headless only (2026-10-06): traced sine fitted in Chrome; math matches desktop and scipy; live radar not yet run | Not yet run |
+| VEX AIM tab: connect, Single Command, RoboSoccer | Not yet run with a robot. Commands match the desktop byte for byte against a simulated robot; https site reaches a LAN ws:// server once local network access is allowed | Not yet run |
+| Badges: XP, levels, badges, toast, badge list | Headless only (2026-10-06); rules match the desktop | Not yet run |
 
 Board identity read by the Step 1 page:
 
