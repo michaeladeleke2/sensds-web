@@ -15,8 +15,8 @@
 //   - Polynomial and Linear are gone,
 //   - one to four sinusoids, each with an optional starting frequency.
 
-import { LiveDopplerProcessor } from '../dsp/doppler_live.js';
-import { computeRecorded } from '../dsp/recorded.js';
+import { RdmComputer } from '../dsp/doppler_live.js';
+import { LiveProcessorClient } from '../dsp/live_client.js';
 import { referenceRgb } from '../collect/training_image.js';
 import { axisTicks } from '../viz/ticks.js';
 import { subscribeFrames } from './radar_session.js';
@@ -40,7 +40,7 @@ const visible = () => !pane.hidden;
 const st = {
   window: 5,                 // seconds of history
   width: 50,                 // frames (columns) in the window
-  proc: null,
+  proc: null,               // LiveProcessorClient (worker)
   raw: [],                   // raw antenna-0 frames, one window's worth
   liveSpec: null,            // (width x bins) dB, oldest first
   dirty: false,
@@ -54,14 +54,16 @@ const st = {
   points: [],
   fit: null,
 };
-const bins = () => st.proc.dopplerFftSize;
+const DOPPLER_BINS = new RdmComputer(N_SAMPLE, N_CHIRP).dopplerFftSize;
+const bins = () => DOPPLER_BINS;
 const timeScale = () => st.window / st.width;
 const velScale = () => (2 * MAX_SPEED) / bins();
 
 // ══════════════ live buffer ══════════════
 function rebuild() {
   st.width = Math.max(2, Math.round(st.window * FPS));
-  st.proc = new LiveDopplerProcessor({ nSample: N_SAMPLE, nChirp: N_CHIRP, historyLength: st.width });
+  st.proc ??= new LiveProcessorClient(({ history }) => { if (!st.frozen) { st.liveSpec = history; st.dirty = true; } });
+  st.proc.reset({ nSample: N_SAMPLE, nChirp: N_CHIRP, historyLength: st.width });
   st.raw = [];
   st.liveSpec = null;
   st.view = [0, st.window];
@@ -75,8 +77,7 @@ subscribeFrames(cube => {
   const a0 = cube.slice(0, N_CHIRP * N_SAMPLE);
   st.raw.push(a0);
   if (st.raw.length > st.width) st.raw.shift();
-  st.liveSpec = st.proc.processFrame(a0).history;
-  st.dirty = true;
+  st.proc.push(a0);
 });
 setInterval(() => {
   if (!st.dirty || st.frozen || !visible()) return;
@@ -88,7 +89,7 @@ setInterval(() => {
 // The reference picture for a (width x bins) spectrogram, row 0 (the first
 // Doppler bin) on top, as the desktop shows it after its row flip.
 function setImageFromSpec(spec) {
-  const D = st.proc.dopplerFftSize, W = st.width;
+  const D = DOPPLER_BINS, W = st.width;
   if (!spec) { st.image = null; return; }
   const rgb = referenceRgb(spec, W, D, currentJetVmin());
   const c = st.image?.canvas?.width === W && st.image.canvas.height === D ? st.image.canvas : new OffscreenCanvas(W, D);
@@ -101,21 +102,41 @@ function setImageFromSpec(spec) {
 // Snapping works on the picture's rows counted from the bottom, so a traced
 // point and the bin it snaps to agree with what is on screen
 function snapSpecFrom(spec) {
-  const D = st.proc.dopplerFftSize, W = st.width, data = new Float64Array(D * W);
+  const D = DOPPLER_BINS, W = st.width, data = new Float64Array(D * W);
   for (let j = 0; j < D; j++) for (let c = 0; c < W; c++) data[j * W + c] = spec[c * D + (D - 1 - j)];
   return { data, rows: D, cols: W };
 }
 
 // ══════════════ freeze and resume ══════════════
-function freeze() {
+let worker = null, freezeId = 0;
+function drawRecorded(frames) {
+  worker ??= new Worker(new URL('../curvefit/worker.js', import.meta.url), { type: 'module' });
+  const id = ++freezeId;
+  return new Promise((resolve, reject) => {
+    worker.onmessage = ({ data }) => { if (data.id === id) (data.error ? reject(new Error(data.error)) : resolve(data.spectrogram)); };
+    worker.onerror = e => reject(new Error(e.message || 'the drawing worker failed'));
+    worker.postMessage({ id, frames, nChirp: N_CHIRP, nSample: N_SAMPLE });
+  });
+}
+
+async function freeze() {
   st.frozen = true;
   st.frozenRef = false;
+  // Until the reference drawing arrives, trace on the live picture
+  st.snapSpec = st.liveSpec ? snapSpecFrom(st.liveSpec) : null;
+  $('cfSpecHeading').textContent = 'Frozen Spectrogram (app view)';
+  sync();
+  draw();
   if (st.raw.length) {
+    const id = freezeId + 1;
     setStatus('Drawing the frozen window the reference way...');
+    $('cfFreezeBtn').disabled = true;
     try {
-      const D = st.proc.dopplerFftSize, W = st.width;
-      const { spectrogram } = computeRecorded(st.raw, N_CHIRP, N_SAMPLE);
-      const n = st.raw.length;
+      const D = DOPPLER_BINS, W = st.width;
+      const frames = st.raw.slice();
+      const spectrogram = await drawRecorded(frames);
+      if (!st.frozen || id !== freezeId) return;              // resumed, or frozen again, meanwhile
+      const n = frames.length;
       let spec = spectrogram;
       if (n < W) {
         // Pad the front with the window's floor, as the desktop does
@@ -127,15 +148,17 @@ function freeze() {
       setImageFromSpec(spec);
       st.snapSpec = snapSpecFrom(spec);
       st.frozenRef = true;
+      $('cfSpecHeading').textContent = 'Frozen Spectrogram (reference script)';
+      draw();
     } catch (e) {
       setStatus(`Reference drawing unavailable: ${e.message}`, true);
+      sync();
+      return;
     }
   }
-  if (!st.frozenRef) st.snapSpec = st.liveSpec ? snapSpecFrom(st.liveSpec) : null;
-  $('cfSpecHeading').textContent = st.frozenRef ? 'Frozen Spectrogram (reference script)' : 'Frozen Spectrogram (app view)';
   sync();
-  draw();
-  setStatus('Frozen. Start Trace, then drag across the curve.');
+  if (!st.tracing) setStatus('Frozen. Start Trace, then drag across the curve.');
+  else setStatus('Drag across the curve to trace it.');
 }
 
 function resume() {

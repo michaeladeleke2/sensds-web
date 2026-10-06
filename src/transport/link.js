@@ -20,6 +20,9 @@ export const DATA_FRAME_PACKET = 0xD0;
 export const DEFAULT_BAUD = 921600;   // same order the SDK tries
 export const FALLBACK_BAUD = 1000000;
 export const TIMEOUT_MS = 1000;       // BridgeSerial defaultTimeout
+// While bytes are still arriving (a backlog of radar data queued in front of
+// the reply after the page was busy), a reply is waited for up to this long.
+export const BACKLOG_TIMEOUT_MS = 10000;
 
 // SERIAL_MAX_PACKET_SIZE (universal/link_definitions.h)
 export const MAX_PACKET_SIZE = 1024 * 4 - 1;
@@ -129,6 +132,7 @@ export class Link {
     this.log = log;
     this.closed = true;
     this.pending = null;           // the one outstanding command, as in BridgeSerial
+    this.lastRx = 0;               // performance.now() of the last bytes read
     this.onData = null;            // set by the data path; data packets are dropped while null
     this.parser = new PacketParser({
       onControl: p => this._onControl(p),
@@ -153,7 +157,7 @@ export class Link {
       while (!this.closed) {
         const { value, done } = await this.reader.read();
         if (done) break;
-        if (value && value.length) this.parser.push(value);
+        if (value && value.length) { this.lastRx = performance.now(); this.parser.push(value); }
       }
     } catch (e) { if (!this.closed) this.log('Read loop error: ' + e.message); }
   }
@@ -184,7 +188,16 @@ export class Link {
     this.log('TX ' + hexShort(packet));
 
     const response = new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { this.pending = null; reject(new Error('Timeout: request response header not received')); }, TIMEOUT_MS);
+      // BridgeSerial gives up after 1 s. Here the wait is extended while data
+      // keeps arriving, since the reply may be queued behind it.
+      const sent = performance.now();
+      const check = () => {
+        const now = performance.now();
+        if (now - this.lastRx < TIMEOUT_MS && now - sent < BACKLOG_TIMEOUT_MS) { timer = setTimeout(check, TIMEOUT_MS); return; }
+        this.pending = null;
+        reject(new Error('Timeout: request response header not received'));
+      };
+      let timer = setTimeout(check, TIMEOUT_MS);
       this.pending = { resolve: p => { clearTimeout(timer); resolve(p); } };
     });
     await this.writer.write(packet);

@@ -80,7 +80,13 @@ export class RadarDevice {
     if (this.started) return;
     const { sliceSize, sliceBytes, frameBytes } = this.acq;
     // DeviceFmcwBase::configure_data -> BridgeData::setFrameQueueSize
-    const queueSize = frameQueueSize(SENSDS_CONFIG.frame_repetition_time_s);
+    // The SDK sizes its queue for 10 s as 100 entries, but each entry is a
+    // slice and a frame spans several, so it holds well under a second. The
+    // desktop reads on its own thread and never needs more; a web page can be
+    // held up for longer (another app taking the CPU, a screen share), so the
+    // queue and pool here hold the 10 s of whole frames the SDK intends.
+    const slicesPerFrame = Math.ceil(frameBytes / sliceBytes);
+    const queueSize = frameQueueSize(SENSDS_CONFIG.frame_repetition_time_s) * slicesPerFrame;
     this.pool = new FramePool(queueSize + 1);
     this.reader = new RawFrameReader(frameBytes, { maxCount: queueSize, pool: this.pool });
     const assembler = new SliceAssembler(sliceBytes, {
@@ -120,7 +126,14 @@ export class RadarDevice {
   // Stop and start the acquisition again (data stop, soft reset, data
   // configure, data start, registers), as after a FIFO overflow.
   async restart() {
-    await this.stop();
+    try { await this.stop(); } catch (e) {
+      // The board may not have answered the stop (or the reset); start afresh anyway
+      this.log('Stop before restart failed: ' + e.message);
+      this.started = false;
+      this.link.onData = null;
+      this.reader?.reset();
+    }
+    this.link.clearInput();
     await this.start();
   }
 

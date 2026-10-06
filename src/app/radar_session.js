@@ -6,7 +6,7 @@
 
 const subscribers = new Set();
 const stateListeners = new Set();
-const session = { device: null, running: false, drops: 0, frames: 0, mod: null, restarts: 0, goodSinceRestart: 0 };
+const session = { port: null, device: null, running: false, drops: 0, frames: 0, mod: null, restarts: 0, goodSinceRestart: 0 };
 const MAX_RESTARTS = 3;          // in a row, before giving up
 
 export const isConnected = () => Boolean(session.device);
@@ -40,7 +40,7 @@ export async function connectRadar() {
     emit(false, `Could not start the radar: ${e.message}`);
     return false;
   }
-  Object.assign(session, { device, running: true, drops: 0, frames: 0, restarts: 0, goodSinceRestart: 0 });
+  Object.assign(session, { port, device, running: true, drops: 0, frames: 0, restarts: 0, goodSinceRestart: 0 });
   emit(true, 'Radar streaming: BGT60TR13C, 3 antennas, 10 frames per second.');
   loop();
   return true;
@@ -69,12 +69,39 @@ async function loop() {
         console.warn('[radar] restarting acquisition after:', e.message);
         emit(true, `Radar restarted after: ${e.message} (${session.restarts}/${MAX_RESTARTS})`, true);
         try { await session.device.restart(); continue; }
-        catch (err) { await disconnectRadar(`Radar stopped: could not restart (${err.message})`); return; }
+        catch (err) {
+          // The board did not take the restart: reopen the port and start
+          // again, as Disconnect then Connect would, without asking for the port
+          console.warn('[radar] restart failed, reconnecting:', err.message);
+          if (await reconnect()) continue;
+          await disconnectRadar(`Radar stopped: could not restart (${err.message})`);
+          return;
+        }
       }
       await disconnectRadar(`Radar stopped: ${e.message}`);
       return;
     }
   }
+}
+
+async function reconnect() {
+  const { mod, port } = session;
+  emit(true, 'Radar not answering. Reconnecting…', true);
+  try { await session.device.close(); } catch { /* already gone */ }
+  await new Promise(r => setTimeout(r, 500));
+  const device = new mod.RadarDevice(port, { log: m => console.debug('[radar]', m) });
+  try {
+    await device.open();
+    await device.start();
+  } catch (e) {
+    console.warn('[radar] reconnect failed:', e.message);
+    try { await device.close(); } catch { /* nothing open */ }
+    session.device = null;
+    return false;
+  }
+  session.device = device;
+  emit(true, 'Radar reconnected and streaming.', true);
+  return true;
 }
 
 export async function disconnectRadar(message) {

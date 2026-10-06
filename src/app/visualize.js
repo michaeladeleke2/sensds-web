@@ -8,7 +8,7 @@
 //   - Reduce noise switches jet_vmin between -20 and -50 dB and rebuilds the view,
 //   - frames are not processed while the tab is hidden (VisualizeTab.on_raw_frame).
 
-import { LiveDopplerProcessor } from '../dsp/doppler_live.js';
+import { LiveProcessorClient } from '../dsp/live_client.js';
 import { LiveSpectrogramPlot } from '../viz/live_plot.js';
 import { parseNpy, framesFromNpy, writeNpyFloat32 } from '../io/npy.js';
 import { subscribeFrames, isConnected, radarStats, disconnectRadar } from './radar_session.js';
@@ -43,7 +43,8 @@ const historyFrames = () => Math.max(10, Math.round(state.timeWindow * FPS));
 // ---------- view (processor + plot), rebuilt like the desktop reference view ----------
 function buildView() {
   const { nChirp, nSample } = state.dims;
-  state.proc = new LiveDopplerProcessor({ nSample, nChirp, historyLength: historyFrames() });
+  state.proc ??= new LiveProcessorClient(({ history, dopplerBins, count }) => { state.count = count; state.pending = { history, count, dopplerBins }; });
+  state.proc.reset({ nSample, nChirp, historyLength: historyFrames() });
   state.plot = new LiveSpectrogramPlot(canvas, { historyLength: historyFrames(), maxSpeed: REF_MAX_SPEED_M_S, jetVmin: currentJetVmin() });
   state.count = 0;
   state.pending = null;
@@ -65,17 +66,15 @@ function updateReadout() {
 }
 
 // ---------- frame intake ----------
-function onFrame(antenna0) {
-  const out = state.proc.processFrame(antenna0);
-  state.count += 1;
-  state.pending = { history: out.history, count: state.count };   // keep only the newest
-}
+// The spectrogram is computed in a worker; the newest result waits in
+// state.pending for the next redraw
+function onFrame(antenna0) { state.proc.push(antenna0); }
 
 setInterval(() => {
   if (!state.pending || !visible()) return;
-  const { history, count } = state.pending;
+  const { history, count, dopplerBins } = state.pending;
   state.pending = null;
-  state.plot.draw(history, count, state.proc.dopplerFftSize);
+  state.plot.draw(history, count, dopplerBins);
 }, REDRAW_MS);
 
 // Live radar frames
@@ -84,10 +83,8 @@ subscribeFrames(cube => {
   if (!visible() || state.source) return;
   const per = state.dims.nChirp * state.dims.nSample;
   onFrame(cube.subarray(REF_ANTENNA * per, (REF_ANTENNA + 1) * per));
-  if (state.count % 10 === 0) {
-    const { drops } = radarStats();
-    setStatus(`Radar streaming: frame ${state.count}${drops ? `, ${drops} dropped` : ''}.`);
-  }
+  const { frames, drops } = radarStats();
+  if (frames % 10 === 0) setStatus(`Radar streaming: frame ${frames}${drops ? `, ${drops} dropped` : ''}.`);
 });
 
 // Recording playback: 10 fps without drifting.

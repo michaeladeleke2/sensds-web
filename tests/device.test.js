@@ -131,3 +131,21 @@ test('RadarDevice: a FIFO overflow raises FifoOverflow, and restart() streams ag
   assert.equal(kinds.filter(k => k === 'd:3').length, 2, 'data started twice');
   assert.equal(kinds.filter(k => k === 'd:4').length, 2, 'data stopped twice (restart, close)');
 });
+
+test('RadarDevice: restart() still starts again when the board does not answer the stop', async () => {
+  const frameBytes = new Uint8Array(147456).map((_, i) => (i * 3 + 7) & 0xFF);
+  const board = new FakeBoard(frameBytes);
+  const dev = new RadarDevice(board);
+  await dev.open();
+  await dev.start();
+  await dev.nextFrame();
+  // The next data stop gets no reply, as when the reply is lost behind a backlog
+  const respond = board.respond.bind(board);
+  let swallowed = false;
+  board.respond = r => { if (!swallowed && r.req === 0x0d && r.wValue === 4) { swallowed = true; return; } respond(r); };
+  await dev.restart();
+  assert.ok(swallowed);
+  const cube = await dev.nextFrame();
+  assert.deepEqual(cube, rawToCube(unpackPacked12(frameBytes), 3, 128, 256));
+  await dev.close();
+});

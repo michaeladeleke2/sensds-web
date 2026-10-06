@@ -14,7 +14,7 @@
 // "local network access" prompt; until then the connection fails, and the tab
 // shows how to allow it (see docs/procedures/vex_aim.md).
 
-import { LiveDopplerProcessor } from '../dsp/doppler_live.js';
+import { LiveProcessorClient } from '../dsp/live_client.js';
 import { LiveSpectrogramPlot } from '../viz/live_plot.js';
 import { subscribeFrames } from './radar_session.js';
 import { currentJetVmin, onReduceNoiseChange } from './settings.js';
@@ -47,7 +47,7 @@ const st = {
   frameBuf: [], capturing: false, captureFrames: [],
   inferenceRunning: false, cooldownUntil: 0, cacheProbs: {}, cacheRemaining: 0, lastInferDone: 0,
   driving: false, barTimer: null,
-  proc: null, plot: null, count: 0, dirty: false,
+  proc: null, plot: null, count: 0, dirty: false, live: null,
 };
 const minInferGapMs = () => (st.backend === 'webgpu' || st.backend === 'webgl' ? 300 : 1500);   // min_infer_gap_s
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -58,10 +58,12 @@ subscribeFrames(cube => {
   st.frameBuf.push(a0);
   if (st.frameBuf.length > 50) st.frameBuf.shift();          // deque(maxlen=50): 5 s, more than one 3 s epoch
   if (st.capturing) st.captureFrames.push(a0);
-  if (visible()) { st.proc.processFrame(a0); st.count += 1; st.dirty = true; }
+  if (visible()) st.proc.push(a0);
 });
 function buildPlot() {
-  st.proc = new LiveDopplerProcessor({ nSample: N_SAMPLE, nChirp: N_CHIRP, historyLength: LIVE_HISTORY });
+  st.proc ??= new LiveProcessorClient(({ history, dopplerBins, count }) => { st.live = { history, dopplerBins }; st.count = count; st.dirty = true; });
+  st.proc.reset({ nSample: N_SAMPLE, nChirp: N_CHIRP, historyLength: LIVE_HISTORY });
+  st.live = null;
   st.plot = new LiveSpectrogramPlot($('vexPlot'), { historyLength: LIVE_HISTORY, jetVmin: currentJetVmin() });
   st.count = 0;
   if (visible()) st.plot.drawEmpty();
@@ -69,7 +71,7 @@ function buildPlot() {
 setInterval(() => {
   if (!st.dirty || !visible()) return;
   st.dirty = false;
-  st.plot.draw(st.proc.history, st.count, st.proc.dopplerFftSize);
+  st.plot.draw(st.live.history, st.count, st.live.dopplerBins);
 }, 200);
 
 // ══════════════ log ══════════════
@@ -326,10 +328,10 @@ export function initVex() {
   for (const h of HINTS) { const li = document.createElement('li'); li.textContent = h; ul.append(li); }
   $('vexOrigin').textContent = location.origin;
   onReduceNoiseChange(buildPlot);
-  new ResizeObserver(() => { if (visible() && st.plot) { if (st.count) st.plot.draw(st.proc.history, st.count, st.proc.dopplerFftSize); else st.plot.drawEmpty(); } }).observe($('vexPlotWrap'));
+  new ResizeObserver(() => { if (visible() && st.plot) { if (st.live) st.plot.draw(st.live.history, st.count, st.live.dopplerBins); else st.plot.drawEmpty(); } }).observe($('vexPlotWrap'));
   buildPlot();
   onModeChanged();
 }
 // Leaving the tab stops a running session (VexAimTab.stop_if_running)
 export function hideVex() { if (st.driving || st.capturing) onStop(); }
-export function showVex() { requestAnimationFrame(() => { if (st.count) st.plot.draw(st.proc.history, st.count, st.proc.dopplerFftSize); else st.plot.drawEmpty(); }); }
+export function showVex() { requestAnimationFrame(() => { if (st.live) st.plot.draw(st.live.history, st.count, st.live.dopplerBins); else st.plot.drawEmpty(); }); }
