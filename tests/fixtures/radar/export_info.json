@@ -1,0 +1,49 @@
+{
+  "sdk_version": "3.6.4+4b4a6245",
+  "sensor": "BGT60TR13C",
+  "board_uuid": "00323353-4e39-4b4a-3138-303331303331",
+  "firmware": {
+    "description": "Radar Baseboard MCU7 (MCU B)",
+    "version_major": "2",
+    "version_minor": "9",
+    "version_build": "0",
+    "extended_version": "2.9.0"
+  },
+  "date": "2026-10-05",
+  "config": {
+    "frame_repetition_time_s": 0.1,
+    "chirp_repetition_time_s": 0.0002,
+    "num_chirps": 128,
+    "tdm_mimo": false,
+    "start_frequency_Hz": 58000000000.0,
+    "end_frequency_Hz": 63500000000.0,
+    "sample_rate_Hz": 2000000.0,
+    "num_samples": 256,
+    "rx_mask": 7,
+    "tx_mask": 1,
+    "tx_power_level": 31,
+    "lp_cutoff_Hz": 500000,
+    "hp_cutoff_Hz": 80000,
+    "if_gain_dB": 33
+  },
+  "frames": {
+    "count": 20,
+    "dropped": 0,
+    "shape": [
+      20,
+      3,
+      128,
+      256
+    ],
+    "mean_per_antenna": [
+      -0.20564548671245575,
+      -0.008651403710246086,
+      0.016724739223718643
+    ],
+    "std_per_antenna": [
+      0.14792393147945404,
+      0.11980128288269043,
+      0.04095602035522461
+    ]
+  }
+}

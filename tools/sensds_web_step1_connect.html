@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SensDS Web, Step 1: Connect</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 820px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.3rem; margin-bottom: 0.25rem; }
+  p { margin: 0.25rem 0 1rem; opacity: 0.8; }
+  button { font: inherit; padding: 0.5rem 0.9rem; margin: 0 0.5rem 0.5rem 0; border-radius: 6px; border: 1px solid #8886; background: transparent; color: inherit; cursor: pointer; }
+  button:hover { background: #8882; }
+  table { border-collapse: collapse; margin: 0.5rem 0 1rem; }
+  td { padding: 0.2rem 1rem 0.2rem 0; vertical-align: top; }
+  td:first-child { opacity: 0.7; }
+  pre { background: #8881; border: 1px solid #8884; border-radius: 6px; padding: 1rem; min-height: 12rem; white-space: pre-wrap; word-break: break-all; font: 12.5px/1.5 ui-monospace, Menlo, Consolas, monospace; }
+</style>
+</head>
+<body>
+<h1>SensDS Web, Step 1: Connect</h1>
+<p>Runs the same handshake the Infineon SDK runs when it opens a board: board info, firmware and protocol version, and board ID. Read only. Nothing is written to the sensor.</p>
+
+<button id="connectBtn">Connect to radar</button>
+<button id="copyBtn">Copy log</button>
+
+<table id="result"></table>
+<pre id="log"></pre>
+
+<script>
+// ---------- Protocol constants (Strata protocol 4.0) ----------
+const VENDOR_REQ_WRITE = 0x40, VENDOR_REQ_READ = 0xC0, VENDOR_REQ_TRANSFER = 0x43;
+const REQ_BOARD_INFO = 0x80;
+const WVALUE_BOARD_INFO = 0x00, WVALUE_VERSION = 0x01, WVALUE_UUID = 0x02, WVALUE_EXT_VERSION = 0x03;
+const HOST_PROTOCOL_MAJOR = 4;
+const DEFAULT_BAUD = 921600, FALLBACK_BAUD = 1000000;   // same order the SDK tries
+const TIMEOUT_MS = 1000;
+const INFINEON_VID = 0x058B;
+
+const STATUS_NAMES = {
+  0x80: 'header incomplete', 0x81: 'payload incomplete', 0x82: 'payload too long',
+  0x83: 'payload fragmented', 0x84: 'CRC error', 0x85: 'request type invalid',
+  0x86: 'request invalid', 0x87: 'not implemented', 0x88: 'wLength invalid',
+  0x89: 'wValue invalid', 0x8A: 'wIndex invalid', 0x8B: 'payload invalid', 0x8C: 'not available'
+};
+
+// ---------- Logging ----------
+const out = document.getElementById('log');
+const log = (s = '') => { out.textContent += s + '\n'; };
+const hex = bytes => Array.from(bytes, b => b.toString(16).padStart(2, '0')).join(' ');
+
+// ---------- CRC16 CCITT-FALSE (poly 0x1021, init 0xFFFF) ----------
+function crc16(bytes, crc = 0xFFFF) {
+  for (const b of bytes) {
+    crc ^= b << 8;
+    for (let i = 0; i < 8; i++) crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
+  }
+  return crc;
+}
+
+// ---------- Serial link with a byte queue ----------
+class Link {
+  constructor(port) { this.port = port; this.queue = []; this.waiter = null; this.closed = false; }
+
+  async open(baudRate) {
+    await this.port.open({ baudRate, dataBits: 8, stopBits: 1, parity: 'none', flowControl: 'none', bufferSize: 65536 });
+    this.closed = false;
+    this.reader = this.port.readable.getReader();
+    this.writer = this.port.writable.getWriter();
+    this.pump = this.readLoop();
+  }
+
+  async readLoop() {
+    try {
+      while (!this.closed) {
+        const { value, done } = await this.reader.read();
+        if (done) break;
+        if (value) { for (const b of value) this.queue.push(b); if (this.waiter) this.waiter(); }
+      }
+    } catch (e) { if (!this.closed) log('Read loop error: ' + e.message); }
+  }
+
+  clearInput() { this.queue.length = 0; }
+
+  async readExact(n, timeoutMs) {
+    const deadline = performance.now() + timeoutMs;
+    while (this.queue.length < n) {
+      const left = deadline - performance.now();
+      if (left <= 0) throw new Error(`Timeout: wanted ${n} bytes, got ${this.queue.length}`);
+      await new Promise(res => { this.waiter = res; setTimeout(res, left); });
+      this.waiter = null;
+    }
+    return Uint8Array.from(this.queue.splice(0, n));
+  }
+
+  async write(bytes) { await this.writer.write(bytes); }
+
+  async close() {
+    this.closed = true;
+    try { await this.reader.cancel(); } catch {}
+    try { this.reader.releaseLock(); } catch {}
+    try { this.writer.releaseLock(); } catch {}
+    try { await this.pump; } catch {}
+    try { await this.port.close(); } catch {}
+  }
+
+  // One request/response exchange.
+  // Request:  bmReqType, bRequest, wValue(LE), wIndex(LE), wLength(LE), [payload], CRC16(big endian)
+  // Response: bmReqType, bStatus, wLength(LE), [payload], CRC16(big endian)
+  async request(bmReqType, bRequest, wValue, wIndex, wLength, payload, maxReceive) {
+    const header = Uint8Array.of(bmReqType, bRequest, wValue & 0xFF, wValue >> 8, wIndex & 0xFF, wIndex >> 8, wLength & 0xFF, wLength >> 8);
+    const body = (bmReqType === VENDOR_REQ_READ || !payload) ? new Uint8Array(0) : payload;
+    const crc = crc16(body, crc16(header));
+    const packet = new Uint8Array(header.length + body.length + 2);
+    packet.set(header, 0); packet.set(body, header.length);
+    packet[packet.length - 2] = crc >> 8; packet[packet.length - 1] = crc & 0xFF;
+
+    log('TX ' + hex(packet));
+    await this.write(packet);
+
+    const head = await this.readExact(4, TIMEOUT_MS);
+    const respLength = head[2] | (head[3] << 8);
+    if (respLength > maxReceive) throw new Error(`Response too long (${respLength} > ${maxReceive}). Header: ${hex(head)}`);
+    const data = await this.readExact(respLength, TIMEOUT_MS);
+    const tail = await this.readExact(2, TIMEOUT_MS);
+    log('RX ' + hex(head) + (respLength ? ' | ' + hex(data) : '') + ' | ' + hex(tail));
+
+    if (crc16(tail, crc16(data, crc16(head))) !== 0) throw new Error('Response CRC error');
+    if (head[0] !== bmReqType) throw new Error(`Response type mismatch: got 0x${head[0].toString(16)}`);
+    if (head[1] !== 0) throw new Error(`Board returned status 0x${head[1].toString(16)} (${STATUS_NAMES[head[1]] || 'error code'})`);
+    if (bmReqType === VENDOR_REQ_READ && respLength !== wLength) throw new Error(`Read length mismatch: ${respLength} vs ${wLength}`);
+    return data;
+  }
+
+  vendorRead(bRequest, wValue, wIndex, wLength) {
+    return this.request(VENDOR_REQ_READ, bRequest, wValue, wIndex, wLength, null, wLength);
+  }
+  vendorTransfer(bRequest, wValue, wIndex, payload, maxReceive) {
+    const p = payload || new Uint8Array(0);
+    return this.request(VENDOR_REQ_TRANSFER, bRequest, wValue, wIndex, p.length, p, maxReceive);
+  }
+}
+
+// ---------- Handshake, in the order the SDK performs it ----------
+const cstring = bytes => { const end = bytes.indexOf(0); return new TextDecoder().decode(bytes.subarray(0, end < 0 ? bytes.length : end)); };
+const u16 = (b, i) => b[i] | (b[i + 1] << 8);
+
+async function handshake(link) {
+  const info = {};
+
+  log('\n# Board info');
+  const bi = await link.vendorTransfer(REQ_BOARD_INFO, WVALUE_BOARD_INFO, 0, null, 256);
+  info['Board name'] = cstring(bi.subarray(4));
+  info['Board VID:PID'] = `0x${u16(bi, 0).toString(16).padStart(4, '0')}:0x${u16(bi, 2).toString(16).padStart(4, '0')}`;
+
+  log('\n# Version info');
+  const vi = await link.vendorRead(REQ_BOARD_INFO, WVALUE_VERSION, 0, 16);
+  const v = Array.from({ length: 8 }, (_, i) => u16(vi, i * 2));
+  info['Firmware version'] = `${v[0]}.${v[1]}.${v[2]}.${v[3]}`;
+  info['Protocol version'] = `${v[4]}.${v[5]}`;
+  info['Protocol check'] = v[4] === HOST_PROTOCOL_MAJOR ? 'OK (matches host protocol 4)'
+    : v[4] < HOST_PROTOCOL_MAJOR ? 'Board firmware too old, update needed' : 'Board is newer than this host code';
+
+  log('\n# Board UUID');
+  try {
+    const id = await link.vendorRead(REQ_BOARD_INFO, WVALUE_UUID, 0, 16);
+    info['Board UUID'] = hex(id).replace(/ /g, '');
+  } catch (e) { info['Board UUID'] = 'not provided (' + e.message + ')'; }
+
+  log('\n# Extended version');
+  try {
+    const ev = await link.vendorTransfer(REQ_BOARD_INFO, WVALUE_EXT_VERSION, 0, null, 256);
+    info['Extended version'] = cstring(ev);
+  } catch (e) { info['Extended version'] = 'not provided (' + e.message + ')'; }
+
+  return info;
+}
+
+async function connect() {
+  out.textContent = '';
+  document.getElementById('result').innerHTML = '';
+  log('Browser: ' + navigator.userAgent);
+  if (!('serial' in navigator)) return log('Web Serial is not supported here. Use Chrome or Edge on a computer.');
+
+  let port;
+  try { port = await navigator.serial.requestPort({ filters: [{ usbVendorId: INFINEON_VID }] }); }
+  catch { return log('No port selected.'); }
+
+  for (const baud of [DEFAULT_BAUD, FALLBACK_BAUD]) {
+    const link = new Link(port);
+    try {
+      log(`\nOpening port at ${baud} baud, 8N1, no flow control`);
+      await link.open(baud);
+      await new Promise(r => setTimeout(r, 100));
+      link.clearInput();                       // drop stale bytes, as the SDK does
+      const info = await handshake(link);
+      await link.close();
+      document.getElementById('result').innerHTML =
+        Object.entries(info).map(([k, val]) => `<tr><td>${k}</td><td>${val}</td></tr>`).join('');
+      log('\nRESULT');
+      for (const [k, val] of Object.entries(info)) log(`  ${k}: ${val}`);
+      log('\nHandshake complete. Port closed.');
+      return;
+    } catch (e) {
+      log('FAILED at ' + baud + ' baud: ' + e.message);
+      await link.close();
+    }
+  }
+  log('\nCould not complete the handshake. Copy this log and send it back.');
+}
+
+document.getElementById('connectBtn').onclick = connect;
+document.getElementById('copyBtn').onclick = async () => {
+  try { await navigator.clipboard.writeText(out.textContent); log('(log copied)'); }
+  catch { log('(copy failed, select the text manually)'); }
+};
+</script>
+</body>
+</html>

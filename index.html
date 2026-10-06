@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SensDS Web</title>
+<style>
+  /* SensDSv2 ui/__init__.py app_colors(), light and dark */
+  :root {
+    --bg: #f0f2f5; --panel: #ffffff; --border: #dddddd; --input-bg: #ffffff; --input-border: #cccccc;
+    --text: #333333; --subtext: #555555; --faint: #777777; --accent: #1a3a5c; --tab-hover: #e2e8f0;
+    --divider: #eeeeee; --progress-bg: #e0e0e0;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1c1c1e; --panel: #2c2c2e; --border: #3c3c3e; --input-bg: #3a3a3a; --input-border: #555555;
+      --text: #f0f0f0; --subtext: #b0b0b0; --faint: #888888; --accent: #5b9bd5; --tab-hover: #2a2a2c;
+      --divider: #3c3c3e; --progress-bg: #3a3a3a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1c1c1e; --panel: #2c2c2e; --border: #3c3c3e; --input-bg: #3a3a3a; --input-border: #555555;
+    --text: #f0f0f0; --subtext: #b0b0b0; --faint: #888888; --accent: #5b9bd5; --tab-hover: #2a2a2c;
+    --divider: #3c3c3e; --progress-bg: #3a3a3a;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; display: flex; flex-direction: column; }
+
+  /* Source bar (web only: the desktop connects from its main window) */
+  #sourcebar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--border); }
+  #sourcebar .brand { font-weight: bold; color: var(--accent); margin-right: 8px; }
+  #status { color: var(--subtext); margin-left: auto; font-size: 12px; }
+  button, select { font: inherit; color: var(--text); background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 5px; padding: 5px 10px; cursor: pointer; }
+  button:hover:not(:disabled) { background: var(--tab-hover); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.primary { color: var(--accent); font-weight: bold; }
+
+  /* Visualize tab */
+  #viz { flex: 1; display: flex; min-height: 0; }
+  #panel { width: 300px; flex: none; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--border); padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .heading { font-size: 16px; font-weight: bold; color: var(--accent); }
+  .field-label { font-size: 12px; font-weight: bold; color: var(--subtext); }
+  .param-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .param-name { font-size: 12px; color: var(--text); }
+  .param-value { font-size: 12px; font-weight: bold; color: var(--accent); font-family: Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace; }
+  .desc { font-size: 11px; color: var(--faint); }
+  hr { border: none; border-top: 1px solid var(--divider); margin: 2px 0; width: 100%; }
+  select { width: 100%; max-height: 30px; padding: 5px 8px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  label.check { display: flex; gap: 6px; align-items: center; font-size: 13px; cursor: pointer; }
+  .spacer { flex: 1; }
+  #readout { font-size: 11px; color: var(--subtext); font-family: Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 8px; white-space: pre; margin: 0; }
+
+  #plotarea { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 0 16px 6px 8px; }
+  #plot { width: 100%; height: 100%; display: block; }
+
+  @media (max-width: 700px) {
+    #viz { flex-direction: column; }
+    #panel { width: 100%; border-right: none; border-bottom: 1px solid var(--border); padding: 12px 16px; }
+    #plotarea { min-height: 360px; padding: 8px 16px; }
+  }
+</style>
+</head>
+<body>
+<div id="sourcebar">
+  <span class="brand">SensDS</span>
+  <button id="connectBtn" class="primary" disabled title="Live radar needs Chrome or Edge on a computer.">Connect Radar</button>
+  <button id="openBtn" title="Play a raw capture saved by SensDSv2's Collect tab (sample_NNN_raw.npy), at the radar's 10 frames per second.">Open recording…</button>
+  <input id="fileInput" type="file" accept=".npy" hidden>
+  <button id="pauseBtn" disabled>Pause</button>
+  <label class="check"><input id="loopChk" type="checkbox" checked> Loop</label>
+  <span id="status">No source. Open a recording saved by SensDSv2.</span>
+</div>
+
+<div id="viz">
+  <div id="panel">
+    <div class="heading">Visualize</div>
+    <hr>
+    <div class="field-label">Spectrogram Method</div>
+    <select id="methodSel">
+      <option value="infineon" selected title="Builds a full Range-Doppler Map per frame, tracks the most energetic range bin (median-smoothed), and emits that Doppler slice.&#10;512 Doppler bins x 1 column per frame. No MTI; range tracking rejects clutter instead.&#10;Retrain before using a model with this representation.">Infineon SDK</option>
+      <option value="stft" disabled>STFT (original), not in the web version yet</option>
+    </select>
+    <div class="desc" id="methodDesc">512 bins x 1 col/frame  ·  range tracked  ·  retrain models</div>
+    <hr>
+    <div class="field-label">Display Axes</div>
+    <div class="param-row"><span class="param-name">Time window (X)</span><span class="param-value" id="timeValue">5 s</span></div>
+    <input id="timeSlider" type="range" min="1" max="60" value="5" title="Seconds of history shown across the X axis.&#10;&#10;This also controls how fine the image looks: the radar&#10;produces a fixed number of columns per second, so a short&#10;window spreads few columns over the full width and looks&#10;blocky. Increase it for a finer picture.&#10;&#10;Changing this resizes the scroll buffer, so the current&#10;history clears and refills at the incoming frame rate.">
+    <div class="param-row"><span class="param-name">Plot size</span></div>
+    <select id="sizeSel" title="How large the spectrogram is drawn.&#10;&#10;Fill window uses all available space. The fixed sizes match a&#10;matplotlib figure of the same inches at 100 dpi, so a 6.4 x 6.4&#10;square here is the same size as figsize=(6.4, 6.4) there.&#10;&#10;A smaller plot spreads the same columns over fewer pixels, which&#10;also makes the image look less coarse.">
+      <option value="">Fill window</option>
+      <option value="640x640">Square  6.4 x 6.4 in</option>
+      <option value="640x480">Wide  6.4 x 4.8 in</option>
+      <option value="900x900">Large square  9 x 9 in</option>
+    </select>
+    <label class="check" title="Lower the reference plot's color floor (jet_vmin) from -20 to&#10;-50 dB.&#10;&#10;When nothing in view reaches -20 dB, as when nobody is moving,&#10;the reference script falls back to a floor 40 dB below the&#10;brightest point and the background fills with noise. At -50 dB&#10;a still scene stays dark and gestures show more faint detail.&#10;&#10;Shared with the Collect tab: it also changes the saved training&#10;images and what the model is shown live."><input id="noiseChk" type="checkbox"> Reduce noise</label>
+    <div class="spacer"></div>
+    <hr>
+    <pre id="readout"></pre>
+  </div>
+  <div id="plotarea"><canvas id="plot"></canvas></div>
+</div>
+
+<script type="module" src="src/app/visualize.js"></script>
+<script>
+  // If the page script fails to load (a stale cached file, a missing file),
+  // say so instead of leaving the controls silently disabled.
+  window.addEventListener('error', e => {
+    if (e.target && e.target.tagName === 'SCRIPT' || /import|export|module/i.test(e.message || '')) {
+      document.getElementById('status').textContent = 'The page did not load completely. Reload it with Cmd+Shift+R (Windows: Ctrl+Shift+R).';
+    }
+  }, true);
+  setTimeout(() => {
+    if (!window.sensds) document.getElementById('status').textContent = 'The page did not load completely. Reload it with Cmd+Shift+R (Windows: Ctrl+Shift+R).';
+  }, 4000);
+</script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radar USB Probe</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.3rem; margin-bottom: 0.25rem; }
+  p { margin: 0.25rem 0 1rem; opacity: 0.8; }
+  button { font: inherit; padding: 0.5rem 0.9rem; margin: 0 0.5rem 0.5rem 0; border-radius: 6px; border: 1px solid #8886; background: transparent; color: inherit; cursor: pointer; }
+  button:hover { background: #8882; }
+  pre { background: #8881; border: 1px solid #8884; border-radius: 6px; padding: 1rem; min-height: 14rem; white-space: pre-wrap; word-break: break-word; font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; }
+</style>
+</head>
+<body>
+<h1>Radar USB Probe</h1>
+<p>Plug in the radar board, close any app using it (Radar Fusion GUI, SensDS), then run both checks and pick the board in each popup.</p>
+
+<button id="serialBtn">1. Check Web Serial</button>
+<button id="usbBtn">2. Check WebUSB</button>
+<button id="copyBtn">Copy report</button>
+<button id="clearBtn">Clear</button>
+
+<pre id="log"></pre>
+
+<script>
+const out = document.getElementById('log');
+const log = (s = '') => { out.textContent += s + '\n'; };
+const hex = (n, w = 4) => n == null ? 'n/a' : '0x' + n.toString(16).padStart(w, '0');
+
+const USB_CLASSES = {
+  0x00: 'defined per interface', 0x02: 'CDC communications (serial)', 0x03: 'HID',
+  0x08: 'mass storage', 0x0a: 'CDC data', 0xef: 'miscellaneous / composite',
+  0xfe: 'application specific', 0xff: 'vendor specific'
+};
+const cls = c => `${hex(c, 2)} (${USB_CLASSES[c] || 'other'})`;
+
+log('Browser: ' + navigator.userAgent);
+log('Platform: ' + (navigator.userAgentData?.platform || navigator.platform));
+log('Secure context: ' + window.isSecureContext);
+log('Web Serial supported: ' + ('serial' in navigator));
+log('WebUSB supported: ' + ('usb' in navigator));
+log();
+
+document.getElementById('serialBtn').onclick = async () => {
+  log('=== WEB SERIAL ===');
+  if (!('serial' in navigator)) return log('Not supported in this browser. Use Chrome or Edge on desktop.\n');
+  try {
+    const port = await navigator.serial.requestPort();
+    const info = port.getInfo();
+    log(`Port selected. VID ${hex(info.usbVendorId)}  PID ${hex(info.usbProductId)}`);
+    try {
+      await port.open({ baudRate: 115200 });
+      log('Open at 115200 baud: SUCCESS');
+      await port.close();
+      log('Closed cleanly.');
+    } catch (e) {
+      log('Open FAILED: ' + e.name + ': ' + e.message);
+    }
+  } catch (e) {
+    log(e.name === 'NotFoundError'
+      ? 'No port chosen. If the board was not in the list, it is not exposed as a serial device.'
+      : 'Error: ' + e.name + ': ' + e.message);
+  }
+  log();
+};
+
+document.getElementById('usbBtn').onclick = async () => {
+  log('=== WEBUSB ===');
+  if (!('usb' in navigator)) return log('Not supported in this browser. Use Chrome or Edge.\n');
+  try {
+    const dev = await navigator.usb.requestDevice({ filters: [] });
+    log(`Device: ${dev.manufacturerName || '?'} / ${dev.productName || '?'}`);
+    log(`VID ${hex(dev.vendorId)}  PID ${hex(dev.productId)}  USB ${dev.usbVersionMajor}.${dev.usbVersionMinor}`);
+    log(`Device class: ${cls(dev.deviceClass)}`);
+    for (const cfg of dev.configurations) {
+      log(`Configuration ${cfg.configurationValue}:`);
+      for (const itf of cfg.interfaces) {
+        for (const alt of itf.alternates) {
+          log(`  Interface ${itf.interfaceNumber} alt ${alt.alternateSetting}: class ${cls(alt.interfaceClass)}, subclass ${hex(alt.interfaceSubclass, 2)}, protocol ${hex(alt.interfaceProtocol, 2)}`);
+          for (const ep of alt.endpoints) {
+            log(`    Endpoint ${ep.endpointNumber} ${ep.direction} ${ep.type}, packet size ${ep.packetSize}`);
+          }
+        }
+      }
+    }
+    try {
+      await dev.open();
+      log('Open: SUCCESS');
+      if (dev.configuration === null) await dev.selectConfiguration(1);
+      for (const itf of dev.configuration.interfaces) {
+        try {
+          await dev.claimInterface(itf.interfaceNumber);
+          log(`  Claim interface ${itf.interfaceNumber}: SUCCESS`);
+          await dev.releaseInterface(itf.interfaceNumber);
+        } catch (e) {
+          log(`  Claim interface ${itf.interfaceNumber}: FAILED (${e.name}: ${e.message})`);
+        }
+      }
+      await dev.close();
+    } catch (e) {
+      log('Open FAILED: ' + e.name + ': ' + e.message);
+    }
+  } catch (e) {
+    log(e.name === 'NotFoundError'
+      ? 'No device chosen. If the board was not in the list, the browser blocks it or cannot see it.'
+      : 'Error: ' + e.name + ': ' + e.message);
+  }
+  log();
+};
+
+document.getElementById('copyBtn').onclick = async () => {
+  try { await navigator.clipboard.writeText(out.textContent); log('(report copied)'); }
+  catch { log('(copy failed, select the text manually)'); }
+};
+document.getElementById('clearBtn').onclick = () => { out.textContent = ''; };
+</script>
+</body>
+</html>

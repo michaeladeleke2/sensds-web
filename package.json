@@ -1,0 +1,11 @@
+{
+  "name": "sensds-web",
+  "private": true,
+  "type": "module",
+  "description": "SensDS in the browser: Infineon BGT60TR13C over Web Serial",
+  "scripts": {
+    "test": "node --test tests/",
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/serve.mjs"
+  }
+}
