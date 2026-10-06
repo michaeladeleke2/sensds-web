@@ -133,7 +133,29 @@
   .feat-row.on-axis .feat-name { color: var(--text); font-weight: bold; }
   .feat-row.on-axis .feat-val { color: var(--accent); font-weight: bold; }
 
+  /* Train tab (ui/train_tab.py) */
+  .status-warn { font-size: 12px; color: #e67e22; font-weight: bold; white-space: pre-wrap; }
+  .student-list { display: flex; flex-direction: column; gap: 4px; padding: 4px 0 4px 16px; }
+  .cfg-row { display: grid; grid-template-columns: 1fr 120px; gap: 8px; align-items: center; }
+  .cfg-row input { font: inherit; width: 100%; color: var(--text); background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 5px; padding: 4px 8px; font-size: 13px; }
+  .train-btn { background: var(--accent); }
+  .train-btn:hover:not(:disabled) { background: #245080; }
+  .train-btn:disabled { background: var(--progress-bg); color: var(--faint); opacity: 1; }
+  .stop-btn { background: #c0392b; }
+  .train-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 20px; }
+  .train-header { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: baseline; }
+  .section-heading { font-size: 14px; font-weight: bold; color: var(--accent); }
+  .train-timer { font-size: 12px; font-weight: bold; color: var(--subtext); font-family: Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace; }
+  .charts-row { flex: 3; min-height: 160px; display: flex; gap: 10px; }
+  .chart-box { flex: 2; min-width: 0; min-height: 120px; }
+  .chart-box.wide { flex: 3; }
+  .chart-box canvas { width: 100%; height: 100%; display: block; border-radius: 4px; }
+  .train-log { flex: 1; min-height: 60px; margin: 0; overflow: auto; white-space: pre-wrap; font-size: 12px; font-family: Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 5px; padding: 8px; }
+
   @media (max-width: 700px) {
+    .charts-row { flex-direction: column; }
+    .chart-box { min-height: 220px; }
+    .train-main { padding: 12px 16px; }
     .pane, .subpane { flex-direction: column; }
     .detail { width: 100%; border-left: none; border-top: 1px solid var(--border); padding: 12px 16px; }
     .plot-col { padding: 12px 16px; }
@@ -160,6 +182,7 @@
   <button id="tab-visualize" role="tab" aria-selected="true">📡   Visualize</button>
   <button id="tab-collect" role="tab" aria-selected="false">🎙   Collect</button>
   <button id="tab-analysis" role="tab" aria-selected="false">🔬   Analysis</button>
+  <button id="tab-train" role="tab" aria-selected="false">🧠   Train</button>
 </nav>
 
 <div id="visualizePane" class="pane" role="tabpanel">
@@ -336,6 +359,51 @@ Both are reduced to 2D with PCA. The one whose classes form tighter, more separa
       <div class="tip" id="specTip" hidden></div>
       <div class="tip" id="rfftTip" hidden></div>
     </div>
+  </div>
+</div>
+
+<div id="trainPane" class="pane" role="tabpanel" hidden>
+  <div class="side">
+    <div class="heading">Train Model</div>
+    <hr>
+    <div class="field-label">Dataset</div>
+    <label class="check"><input type="radio" name="studentMode" id="allStudents" checked> All students</label>
+    <label class="check"><input type="radio" name="studentMode" id="selectStudents"> Select students</label>
+    <div id="studentList" class="student-list" hidden></div>
+    <button id="trainFolderBtn" class="minor-btn" title="Where your samples are saved: the same folder the Collect tab uses.">📂  Choose Data Folder</button>
+    <button id="trainRefreshBtn" class="minor-btn">↻  Refresh</button>
+    <hr>
+    <div class="field-label">Dataset Status</div>
+    <div id="trainClasses"></div>
+    <div id="trainSamples"></div>
+    <div id="trainReady"></div>
+    <div class="small" id="trainMsg"></div>
+    <hr>
+    <div class="field-label">Config</div>
+    <div class="cfg-row"><label class="field-label" for="epochs">Epochs</label><input id="epochs" type="number" min="1" max="50" step="1" value="15" title="An epoch is one full run through all your samples.&#10;Think of it like rereading your notes before a test. The more&#10;times you review, the more the model remembers (up to a point).&#10;15 is a solid starting number for most gesture projects."></div>
+    <div class="cfg-row"><label class="field-label" for="batchSize">Batch size</label><input id="batchSize" type="number" min="1" max="64" step="1" value="8" title="Batch size = how many samples the model studies at once&#10;before it adjusts itself. It's like grading 8 quizzes at a time&#10;instead of one at a time. Faster, but uses more memory.&#10;Keep it at 8 for small datasets; increase it if you have 200+ samples."></div>
+    <div class="cfg-row"><label class="field-label" for="lr">Learning rate</label><input id="lr" type="number" min="0.000001" max="0.01" step="0.00001" value="0.000020" title="Learning rate controls how fast the model adjusts after a mistake.&#10;Too high → it overcorrects and goes haywire (loss shoots up).&#10;Too low → it barely changes, like studying 1 word per hour.&#10;0.00002 is the sweet spot that works for almost every gesture project."></div>
+    <div class="cfg-row"><label class="field-label" for="valSubjects">Val subjects</label><input id="valSubjects" type="number" min="1" max="10" step="1" value="1" title="Val subjects = how many students are kept secret from the model&#10;during training and used only for the final accuracy test.&#10;It's like having a classmate quiz you on new questions, not&#10;the ones you already practiced. Keeps the score fair and honest."></div>
+    <hr>
+    <div class="field-label">Model Size</div>
+    <select id="modelSize" title="Small: ~22 M parameters. Trains and runs significantly faster.&#10;Recommended for Surface Pro and other CPU-only devices.&#10;&#10;Base: ~86 M parameters. Higher accuracy but slower to train.&#10;Use if you have a machine with a dedicated GPU or more time."></select>
+    <div class="field-label">Base Model</div>
+    <div id="modelStatus"></div>
+    <button id="downloadBtn" class="minor-btn">⬇  Download Model (once)</button>
+    <div class="spacer"></div>
+    <div class="hint"><span aria-hidden="true">💡</span><span id="trainHint"></span></div>
+    <button id="trainBtn" class="big-btn train-btn" disabled>▶  Start Training</button>
+    <button id="stopTrainBtn" class="big-btn stop-btn" hidden>■  Stop</button>
+  </div>
+  <div class="train-main">
+    <div class="train-header"><span class="section-heading">Training Progress  (per epoch)</span><span id="trainTimer" class="train-timer"></span></div>
+    <div class="charts-row">
+      <div class="chart-box wide"><canvas id="scoreChart"></canvas></div>
+      <div class="chart-box"><canvas id="lossChart"></canvas></div>
+    </div>
+    <div class="section-heading">Training Log</div>
+    <pre id="trainLog" class="train-log"></pre>
+    <div class="small">Models are saved to &lt;data folder&gt;/models/&lt;students&gt;_vN/ in the same format the desktop app uses.</div>
   </div>
 </div>
 

@@ -40,6 +40,7 @@ Chrome or Edge on Mac, Windows, Linux, Chromebook. Not Safari, Firefox, iPhone, 
 | Live streaming to the Visualize page (configure, stream, stop) | Pass (2026-10-05) | Pass (2026-10-05, hosted site) |
 | Collect tab: batch capture saved to a folder | Pass (2026-10-05) | Pass (2026-10-05, another Windows laptop, hosted site; Surface not yet run) |
 | Analysis tab: physical features, CSV export, PCA comparison | Pass (2026-10-05) | Not yet run |
+| Train tab: fine-tune vit-small in the browser (WebGPU), save Hugging Face model | Pass (2026-10-05, Small; Base runs out of GPU memory on that laptop) | Not yet run |
 
 Board identity read by the Step 1 page:
 

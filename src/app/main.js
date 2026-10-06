@@ -4,6 +4,7 @@
 import { initVisualize, showVisualize, onRadarConnected } from './visualize.js';
 import { initCollect, showCollect } from './collect.js';
 import { initAnalysis, showAnalysis } from './analysis.js';
+import { initTrain, showTrain } from './train.js';
 import { connectRadar, disconnectRadar, isConnected, onRadarState, hasWebSerial } from './radar_session.js';
 
 const $ = id => document.getElementById(id);
@@ -14,6 +15,7 @@ const TABS = {
   visualize: { pane: 'visualizePane', show: showVisualize },
   collect: { pane: 'collectPane', show: showCollect },
   analysis: { pane: 'analysisPane', show: showAnalysis },
+  train: { pane: 'trainPane', show: showTrain },
 };
 function selectTab(name) {
   for (const [key, t] of Object.entries(TABS)) {
@@ -49,6 +51,7 @@ onRadarState(({ connected, message }) => {
 
 initVisualize({ status: setStatus });
 initAnalysis();
+initTrain();
 initCollect();
 let start = 'visualize';
 try { start = localStorage.getItem('sensds-tab') || 'visualize'; } catch { /* default tab */ }

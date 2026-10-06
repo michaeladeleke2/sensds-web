@@ -10,6 +10,8 @@ Update 2026-10-05 (later): Collect tab ported (Infineon SDK method). compute_rec
 
 Update 2026-10-05 (later): Analysis tab ported (Physical Features, PCA Comparison). Tracked range bins identical, features within 1e-9, CSV text identical, zoom resize within 1e-12, PCA variance and silhouette match SensDSv2 (tests/analysis.test.js, fixtures from reference/python/make_analysis_fixtures.py, including the 20 real frames). Extraction runs in a Web Worker. Procedure: `docs/procedures/analysis.md`.
 
+Update 2026-10-05 (later): Train tab ported: the same ViT fine-tuned in the browser (TensorFlow.js 4.22.0, WebGPU, in a Web Worker). Validated against PyTorch/transformers: tiny ViT forward, two training steps (clip + AdamW + linear lr) and weights; real vit-small forward on a real PNG (FULL=1 test); numpy default_rng shuffle and val transform exact. Saved models load in desktop transformers (from_pretrained) with matching logits. Procedure: `docs/procedures/train_model.md`.
+
 Decisions (2026-10-05):
 
 1. Radar SDK **3.6.4** is the reference (what SensDSv2 runs).
