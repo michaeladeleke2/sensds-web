@@ -152,7 +152,68 @@
   .chart-box canvas { width: 100%; height: 100%; display: block; border-radius: 4px; }
   .train-log { flex: 1; min-height: 60px; margin: 0; overflow: auto; white-space: pre-wrap; font-size: 12px; font-family: Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 5px; padding: 8px; }
 
+  /* Test tab (ui/test_tab.py) */
+  .test-side { width: 310px; padding: 16px 18px; gap: 7px; }
+  .test-heading { font-size: 18px; font-weight: bold; color: var(--accent); }
+  .test-subtitle { font-size: 13px; color: var(--faint); }
+  .test-field-label { font-size: 13px; font-weight: bold; color: var(--subtext); }
+  .load-model-btn { background: var(--tab-hover); border: 2px solid var(--accent); border-radius: 8px; padding: 7px 12px; font-size: 14px; color: var(--accent); font-weight: bold; }
+  .model-lbl { font-size: 12px; color: var(--faint); font-family: Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace; overflow-wrap: anywhere; }
+  .model-lbl.ok { color: #27ae60; } .model-lbl.err { color: #c0392b; }
+  .classes-frame { background: var(--hint-bg); border-radius: 6px; border: 1px solid var(--border); padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; }
+  .classes-title { font-size: 11px; font-weight: bold; color: var(--accent); }
+  .classes-lbl { font-size: 12px; color: var(--text); line-height: 1.4; }
+  .mode-picker { display: flex; flex-direction: column; gap: 4px; }
+  .mode-btn { height: 36px; text-align: left; padding: 0 12px; border-radius: 7px; font-size: 13px; }
+  .mode-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: bold; }
+  .mode-controls { display: flex; flex-direction: column; gap: 6px; }
+  .mode-controls input[type=number] { font: inherit; color: var(--text); background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 6px; padding: 5px 8px; font-size: 13px; }
+  .game-btn { border: none; border-radius: 8px; padding: 11px; font-size: 14px; font-weight: bold; color: #fff; }
+  .game-btn:disabled { background: #aaa !important; opacity: 1; }
+  .game-btn.capture { background: #c0392b; } .game-btn.capture:hover:not(:disabled) { background: #e74c3c; }
+  .game-btn.start { background: #27ae60; } .game-btn.start:hover:not(:disabled) { background: #2ecc71; }
+  .game-btn.stop { background: #c0392b; } .game-btn.stop:hover { background: #e74c3c; }
+  .game-btn.reset { background: #f39c12; } .game-btn.reset:hover { background: #f1c40f; }
+  .maze-guide { background: #f5eef8; border: 1px solid #c39bd3; border-radius: 8px; padding: 7px 10px; font-size: 12px; color: #5b2c6f; display: flex; flex-direction: column; gap: 2px; }
+  .maze-guide span { color: #8e44ad; }
+  .maze-guide-title { font-weight: bold; }
+  .diff-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .diff-btn { height: 44px; font-size: 11px; background: #f5eef8; color: #5b2c6f; border: 1px solid #c39bd3; border-radius: 6px; line-height: 1.2; }
+  .diff-btn.active { background: #8e44ad; color: #fff; border: none; font-weight: bold; }
+  .maze-info { display: flex; gap: 6px; align-items: center; justify-content: space-between; }
+  .facing-lbl { font-size: 12px; font-weight: bold; color: #8e44ad; }
+  .solved-lbl { font-size: 12px; font-weight: bold; color: #27ae60; background: #eafaf1; border: 1px solid #a9dfbf; border-radius: 5px; padding: 2px 6px; }
+  .test-status { font-size: 13px; font-weight: bold; min-height: 40px; overflow-wrap: anywhere; }
+  .confirm-box { background: #fffbee; border: 1px solid #f0c84a; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+  .confirm-q { font-size: 13px; font-weight: bold; color: #5a4000; }
+  .confirm-grid { display: grid; gap: 4px; }
+  .confirm-btn { background: #fff; border: 1px solid #1a3a5c; color: #1a3a5c; font-size: 12px; padding: 5px 8px; border-radius: 5px; }
+  .confirm-btn:hover { background: #e8f0fb; }
+  .confirm-skip { background: #f5f5f5; border: 1px solid #ccc; color: #888; font-size: 12px; padding: 5px 8px; border-radius: 5px; }
+  .test-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+  .game-area { flex: 3; min-height: 200px; position: relative; }
+  .game-area canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: 6px; }
+  .gesture-bar { height: 42px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-radius: 6px; border: 1px solid; font-size: 13px; font-weight: bold; }
+  .gesture-bar #gbText { flex: 1; }
+  .gesture-bar #gbCountdown { width: 46px; text-align: right; font-size: 14px; font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace; }
+  .gesture-bar.ready { background: #1a4228; border-color: #27ae60; color: #2ecc71; }
+  .gesture-bar.reading { background: #1a2a45; border-color: #2980b9; color: #5dade2; }
+  .gesture-bar.cooldown { background: #3d2000; border-color: #e67e22; color: #f39c12; }
+  .test-bottom { flex: 1; min-height: 150px; display: flex; gap: 8px; }
+  .spec-frame { width: 180px; flex: none; background: #1a1a2e; border: 1px solid #2e4a6a; border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+  .spec-title { font-size: 11px; font-weight: bold; color: #aac4e0; text-align: center; }
+  .spec-img { flex: 1; min-height: 100px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .spec-hint { font-size: 11px; color: #4a6a8a; text-align: center; }
+  .spec-gesture { font-size: 12px; font-weight: bold; color: #3498db; text-align: center; }
+  .bars-frame { flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+  .bars-title { font-size: 14px; font-weight: bold; color: var(--accent); }
+  #barsCanvas { flex: 1; width: 100%; min-height: 80px; display: block; }
+
   @media (max-width: 700px) {
+    .test-side { width: 100%; }
+    .test-bottom { flex-direction: column; }
+    .spec-frame { width: 100%; }
+    .game-area { min-height: 300px; }
     .charts-row { flex-direction: column; }
     .chart-box { min-height: 220px; }
     .train-main { padding: 12px 16px; }
@@ -183,6 +244,7 @@
   <button id="tab-collect" role="tab" aria-selected="false">🎙   Collect</button>
   <button id="tab-analysis" role="tab" aria-selected="false">🔬   Analysis</button>
   <button id="tab-train" role="tab" aria-selected="false">🧠   Train</button>
+  <button id="tab-test" role="tab" aria-selected="false">✋   Test</button>
 </nav>
 
 <div id="visualizePane" class="pane" role="tabpanel">
@@ -404,6 +466,83 @@ Both are reduced to 2D with PCA. The one whose classes form tighter, more separa
     <div class="section-heading">Training Log</div>
     <pre id="trainLog" class="train-log"></pre>
     <div class="small">Models are saved to &lt;data folder&gt;/models/&lt;students&gt;_vN/ in the same format the desktop app uses.</div>
+  </div>
+</div>
+
+<div id="testPane" class="pane" role="tabpanel" hidden>
+  <div class="side test-side">
+    <div class="test-heading">Test Gestures</div>
+    <div class="test-subtitle">Load your model, then pick a game mode!</div>
+    <hr>
+    <button id="loadModelBtn" class="load-model-btn" title="Pick a trained model folder (models/&lt;name&gt;_vN in your data folder).">📂  Load Model</button>
+    <div id="modelLbl" class="model-lbl">No model loaded.</div>
+    <div id="classesFrame" class="classes-frame" hidden><div id="classesTitle" class="classes-title">Classes</div><div id="classesLbl" class="classes-lbl"></div></div>
+    <hr>
+    <div class="test-field-label">Choose a Mode</div>
+    <div class="mode-picker">
+      <button id="modeSingle" class="mode-btn active">🎯  Try a Gesture</button>
+      <button id="modeRs" class="mode-btn">⚽  RoboSoccer</button>
+      <button id="modeMaze" class="mode-btn">🌀  Maze Game</button>
+    </div>
+    <hr>
+    <div id="ctlSingle" class="mode-controls">
+      <label class="test-field-label" for="captureDuration">Capture Duration (s)</label>
+      <input id="captureDuration" type="number" min="1" max="10" step="0.5" value="3.0">
+      <button id="captureBtn" class="game-btn capture" disabled>🎤  Capture &amp; Predict</button>
+    </div>
+    <div id="ctlRs" class="mode-controls" hidden>
+      <label class="test-field-label" for="rsThreshold">Confidence Threshold</label>
+      <input id="rsThreshold" type="number" min="0.1" max="1" step="0.05" value="0.60">
+      <button id="rsStartBtn" class="game-btn start" disabled>▶  Start RoboSoccer</button>
+      <button id="rsStopBtn" class="game-btn stop" hidden>■  Stop</button>
+    </div>
+    <div id="ctlMaze" class="mode-controls" hidden>
+      <div class="maze-guide">
+        <div class="maze-guide-title">Gesture Controls</div>
+        <div>👈 Swipe Left <span>→ Turn left</span></div>
+        <div>👉 Swipe Right <span>→ Turn right</span></div>
+        <div>👋 Push <span>→ Move forward</span></div>
+        <div>🤚 Idle <span>→ Wait / skip</span></div>
+      </div>
+      <div class="test-field-label">Difficulty</div>
+      <div class="diff-row">
+        <button id="diffEasy" class="diff-btn">Easy<br>4×5</button>
+        <button id="diffMedium" class="diff-btn">Medium<br>5×7</button>
+        <button id="diffHard" class="diff-btn">Hard<br>7×9</button>
+      </div>
+      <div class="maze-info"><span id="facingLbl" class="facing-lbl">Facing: East →</span><span id="solvedLbl" class="solved-lbl">Solved: 0</span></div>
+      <label class="test-field-label" for="mazeThreshold">Min. confidence to act</label>
+      <input id="mazeThreshold" type="number" min="0.1" max="1" step="0.05" value="0.55">
+      <button id="mazeStartBtn" class="game-btn start" disabled>▶  Start Maze</button>
+      <button id="mazeStopBtn" class="game-btn stop" hidden>■  Stop</button>
+      <button id="mazeResetBtn" class="game-btn reset">↺  New Maze</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="hint"><span aria-hidden="true">💡</span><span id="testHint"></span></div>
+    <div id="testStatus" class="test-status" role="status"></div>
+    <div id="confirmBox" class="confirm-box" hidden>
+      <div class="confirm-q">What gesture did you actually perform?</div>
+      <div id="confirmBtns" class="confirm-grid"></div>
+    </div>
+  </div>
+  <div class="test-main">
+    <div id="gameArea" class="game-area">
+      <canvas id="fieldCanvas"></canvas>
+      <canvas id="mazeCanvas" hidden></canvas>
+    </div>
+    <div id="gestureBar" class="gesture-bar" hidden><span id="gbIcon"></span><span id="gbText"></span><span id="gbCountdown"></span></div>
+    <div class="test-bottom">
+      <div class="spec-frame">
+        <div class="spec-title">Last Gesture</div>
+        <div class="spec-img"><canvas id="specPreview"></canvas></div>
+        <div id="specHint" class="spec-hint">Do a gesture<br>to see it here</div>
+        <div id="specGesture" class="spec-gesture"></div>
+      </div>
+      <div class="bars-frame">
+        <div class="bars-title">Model Confidence</div>
+        <canvas id="barsCanvas"></canvas>
+      </div>
+    </div>
   </div>
 </div>
 

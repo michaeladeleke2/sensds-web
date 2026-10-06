@@ -31,7 +31,7 @@ const FRAME_TIMEOUT_MS = 10000;       // ifx_fmcw_get_next_frame
 const REQ_BOARD_INFO = 0x80, WVALUE_VERSION = 0x01;
 const HOST_PROTOCOL_MAJOR = 4;
 
-export { FrameAcquisitionFailed } from '../transport/strata.js';
+export { FrameAcquisitionFailed, FifoOverflow, FrameSizeNotSupported } from '../transport/strata.js';
 
 export class RadarDevice {
   constructor(port, { log = () => {} } = {}) {
@@ -115,6 +115,13 @@ export class RadarDevice {
       this.reader?.reset();
       await executeSpiWords(this.link, [softResetCommand(this.registers.get(REG_MAIN))]);
     }
+  }
+
+  // Stop and start the acquisition again (data stop, soft reset, data
+  // configure, data start, registers), as after a FIFO overflow.
+  async restart() {
+    await this.stop();
+    await this.start();
   }
 
   async close() {

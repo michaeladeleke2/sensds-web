@@ -5,6 +5,7 @@ import { initVisualize, showVisualize, onRadarConnected } from './visualize.js';
 import { initCollect, showCollect } from './collect.js';
 import { initAnalysis, showAnalysis } from './analysis.js';
 import { initTrain, showTrain } from './train.js';
+import { initTest, showTest, hideTest } from './test.js';
 import { connectRadar, disconnectRadar, isConnected, onRadarState, hasWebSerial } from './radar_session.js';
 
 const $ = id => document.getElementById(id);
@@ -16,8 +17,11 @@ const TABS = {
   collect: { pane: 'collectPane', show: showCollect },
   analysis: { pane: 'analysisPane', show: showAnalysis },
   train: { pane: 'trainPane', show: showTrain },
+  test: { pane: 'testPane', show: showTest, hide: hideTest },
 };
 function selectTab(name) {
+  // Leaving a tab can stop its work (the Test tab stops a running game)
+  for (const [key, t] of Object.entries(TABS)) if (key !== name && t.hide && !$(t.pane).hidden) t.hide();
   for (const [key, t] of Object.entries(TABS)) {
     $(t.pane).hidden = key !== name;
     $(`tab-${key}`).setAttribute('aria-selected', String(key === name));
@@ -43,15 +47,16 @@ connectBtn.onclick = async () => {
   else await connectRadar();
   connectBtn.disabled = false;
 };
-onRadarState(({ connected, message }) => {
+onRadarState(({ connected, message, restarted }) => {
   connectBtn.textContent = connected ? 'Disconnect Radar' : 'Connect Radar';
   if (message) setStatus(message);
-  if (connected) onRadarConnected();
+  if (connected && !restarted) onRadarConnected();
 });
 
 initVisualize({ status: setStatus });
 initAnalysis();
 initTrain();
+initTest();
 initCollect();
 let start = 'visualize';
 try { start = localStorage.getItem('sensds-tab') || 'visualize'; } catch { /* default tab */ }

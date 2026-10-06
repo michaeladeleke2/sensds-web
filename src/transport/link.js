@@ -138,7 +138,10 @@ export class Link {
   }
 
   async open(baudRate) {
-    await this.port.open({ baudRate, dataBits: 8, stopBits: 1, parity: 'none', flowControl: 'none', bufferSize: 1 << 20 });
+    // The largest receive buffer Chrome allows (16 MiB, about 11 s of radar
+    // data): if the page is busy for a moment, data waits here instead of the
+    // board's own buffer overflowing.
+    await this.port.open({ baudRate, dataBits: 8, stopBits: 1, parity: 'none', flowControl: 'none', bufferSize: 16 * 1024 * 1024 });
     this.closed = false;
     this.reader = this.port.readable.getReader();
     this.writer = this.port.writable.getWriter();

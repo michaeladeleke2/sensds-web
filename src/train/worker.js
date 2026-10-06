@@ -1,5 +1,5 @@
 // Training runs here, off the page, on the GPU when the browser offers it.
-// TensorFlow.js is loaded from the jsDelivr CDN at a pinned version.
+// TensorFlow.js comes from src/tf/browser.js (jsDelivr CDN, pinned version).
 //
 // in:  { type: 'train', base: { configText, preprocessor, weights }, train: [{ file, label }],
 //        val: [...], labelNames, epochs, batchSize, lr, seed }
@@ -7,25 +7,14 @@
 // out: { type: 'log', msg } | { type: 'epoch', epoch, loss, acc, f1 } | { type: 'progress', phase, ... }
 //      { type: 'done', files, final, stopped } | { type: 'error', message }
 
-import * as tf from 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/+esm';
-// tfjs-core's module build leaves out the gradient definitions training needs;
-// they register into the same global registry.
-import 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/register_all_gradients/+esm';
-import 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-cpu@4.22.0/+esm';
-import 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.22.0/+esm';
-import 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@4.22.0/+esm';
+import { tf, pickBackend as pick } from '../tf/browser.js';
 import { train } from './trainer.js';
 import { readSafetensors } from '../io/safetensors.js';
 
 let stop = false;
 const log = msg => self.postMessage({ type: 'log', msg });
 
-async function pickBackend() {
-  for (const [name, label] of [['webgpu', 'GPU (WebGPU)'], ['webgl', 'GPU (WebGL)'], ['cpu', 'CPU (slow)']]) {
-    try { if (await tf.setBackend(name)) { await tf.ready(); return label; } } catch { /* try the next one */ }
-  }
-  throw new Error('No TensorFlow.js backend is available in this browser.');
-}
+async function pickBackend() { return (await pick()).label; }
 
 // PNG -> RGB bytes, with no colour management (the PNGs carry no colour profile)
 async function decodePng(file) {

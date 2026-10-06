@@ -8,6 +8,12 @@
 4. The status line shows "Radar found: BGT60TR13C, firmware 2.9.0", then "Radar streaming" with a frame count. The spectrogram scrolls at 10 frames per second.
 5. Click **Disconnect Radar** to stop. The radar is stopped and reset as the SDK does it.
 
+If the page falls behind for a moment (for example while a game is running) and
+the radar board's buffer overflows, the page restarts the radar's data stream by
+itself and the status line says "Radar restarted after: ...". It only
+disconnects if three restarts in a row fail. The desktop app stops in this case
+instead; it reads the radar on its own thread, so it rarely falls behind.
+
 Live radar also works on the hosted site (see `publish_website.md`), but not on the claude.ai link, whose sandbox blocks Web Serial.
 
 ## Recordings

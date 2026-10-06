@@ -53,8 +53,17 @@ class FakeBoard {
     // The trigger word (MAIN with FRAME_START) starts the radar: stream one frame.
     if (r.type === 0x40 && r.req === 0x20 && r.wIndex === 0x0130) {
       const last = r.payload.subarray(r.payload.length - 4);
-      if (last[0] === 0x01 && (last[3] & 1)) setTimeout(() => this.streamFrame(), 0);
+      if (last[0] === 0x01 && (last[3] & 1)) {
+        this.triggers = (this.triggers || 0) + 1;
+        setTimeout(() => (this.overflowOnTrigger === this.triggers ? this.sendOverflow() : this.streamFrame()), 0);
+      }
     }
+  }
+
+  // An error data packet carrying E_OVERFLOW, as the firmware reports a FIFO overflow
+  sendOverflow() {
+    const c = this.counter++ & 0xFFFF;
+    this.send(withCrc([0xDB, 0, c & 0xFF, c >> 8, 4, 0, 0x07, 0, 0, 0]));
   }
 
   streamFrame() {
@@ -103,4 +112,22 @@ test('RadarDevice: open, start, one frame, stop against a simulated board', asyn
     '40 req=20 wValue=103 wIndex=130 len=4',       // soft reset
   ]);
   if (process.env.SHOW_BYTES) for (const r of board.requests) console.log(hex(r.raw));
+});
+
+test('RadarDevice: a FIFO overflow raises FifoOverflow, and restart() streams again', async () => {
+  const { FifoOverflow } = await import('../src/avian/device.js');
+  const frameBytes = new Uint8Array(147456).map((_, i) => (i * 5 + 1) & 0xFF);
+  const board = new FakeBoard(frameBytes);
+  board.overflowOnTrigger = 1;                 // the first start reports an overflow
+  const dev = new RadarDevice(board);
+  await dev.open();
+  await dev.start();
+  await assert.rejects(dev.nextFrame(), FifoOverflow);
+  await dev.restart();                         // data stop, soft reset, configure, start, registers
+  const cube = await dev.nextFrame();
+  assert.deepEqual(cube, rawToCube(unpackPacked12(frameBytes), 3, 128, 256));
+  await dev.close();
+  const kinds = board.requests.map(r => `${r.req.toString(16)}:${r.wValue.toString(16)}`);
+  assert.equal(kinds.filter(k => k === 'd:3').length, 2, 'data started twice');
+  assert.equal(kinds.filter(k => k === 'd:4').length, 2, 'data stopped twice (restart, close)');
 });
