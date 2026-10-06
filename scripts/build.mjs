@@ -5,6 +5,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join, normalize, relative } from 'node:path';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -46,10 +47,26 @@ const files = new Set(['index.html', ...main.seen]);
 for (const d of new Set(main.dynamic)) for (const f of staticClosure([d]).seen) files.add(f);
 const strata = [...files].filter(isStrata);
 
+// Version tag on every script URL (index.html, imports, workers). A browser then
+// caches one complete set of files per deploy and never mixes a new page with
+// an older script (GitHub Pages lets browsers cache files for 10 minutes).
+let version = (process.env.GITHUB_SHA || '').slice(0, 12);
+if (!version) { try { version = execSync('git rev-parse --short=12 HEAD', { cwd: root }).toString().trim(); } catch { version = String(Date.now()); } }
+const tag = spec => `${spec}?v=${version}`;
+const versioned = (file, text) => {
+  if (file === 'index.html') return text.replace(/(<script[^>]*\ssrc=")([^"?]+\.js)(")/g, (m, a, src, b) => a + tag(src) + b);
+  if (!file.endsWith('.js')) return text;
+  return text
+    .replace(/(\bfrom\s*|^\s*import\s+|\bimport\s*\(\s*)(['"])(\.{1,2}\/[^'"?]+\.js)\2/gm, (m, a, q, spec) => `${a}${q}${tag(spec)}${q}`)
+    .replace(/(new\s+URL\(\s*)(['"])(\.{1,2}\/[^'"?]+\.js)\2(\s*,\s*import\.meta\.url)/g, (m, a, q, spec, b) => `${a}${q}${tag(spec)}${q}${b}`);
+};
+
 rmSync(out, { recursive: true, force: true });
 for (const f of [...files].sort()) {
   mkdirSync(dirname(join(out, f)), { recursive: true });
-  writeFileSync(join(out, f), readFileSync(join(root, f)));
+  const isText = f.endsWith('.js') || f.endsWith('.html');
+  writeFileSync(join(out, f), isText ? versioned(f, readFileSync(join(root, f), 'utf8')) : readFileSync(join(root, f)));
   console.log('  ' + relative(root, join(out, f)));
 }
+console.log(`version tag: ?v=${version}`);
 console.log(`dist/ ready: ${files.size} files, including ${strata.length} Strata-derived (publishing permitted, see LICENSING.md).`);
