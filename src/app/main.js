@@ -10,6 +10,7 @@ import { initResults, showResults } from './results.js';
 import { initCurveFit, showCurveFit } from './curvefit.js';
 import { initVex, showVex, hideVex } from './vex.js';
 import { initGamification } from './gamification.js';
+import { initAppSwitcher } from './app_switcher.js';
 import { connectRadar, disconnectRadar, isConnected, onRadarState, hasWebSerial } from './radar_session.js';
 
 const $ = id => document.getElementById(id);
@@ -69,6 +70,7 @@ initResults();
 initCurveFit();
 initVex();
 initGamification();
+initAppSwitcher();
 initCollect();
 let start = 'visualize';
 try { start = localStorage.getItem('sensds-tab') || 'visualize'; } catch { /* default tab */ }

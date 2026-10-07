@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SensAV Web</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23C8102E'/%3E%3Cpath d='M6 16h2M10.7 11.3v9.4M16 6v20M21.3 10v12M26 13.3v5.4' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+  /* SensAV's two palettes (app/ui/theme.py), chosen with the theme button */
+  :root {
+    --bg: #FFFFFF; --surface: #F6F6F7; --surface-hover: #EEEEF0; --surface-pressed: #E4E4E7;
+    --border: #E6E6E9; --border-strong: #D4D4D8; --text: #111111; --text-secondary: #6B6B70; --text-disabled: #A8A8AD;
+    --accent: #C8102E; --accent-hover: #A50D26; --accent-pressed: #8C0B20; --accent-soft: #FBEAED; --on-accent: #FFFFFF;
+    --success: #1F9D55; --success-soft: #E5F5EC; --warning: #B86E00; --warning-soft: #FDF2DF; --danger: #C8102E;
+    --track: #E6E6E9; --stage: #1A1A1C; --stage-text: #9A9AA0;
+    --gutter: 24px; --gap: 16px; --panel-pad: 20px; --control-h: 38px;
+    --font: "Inter", "Segoe UI Variable Text", "Segoe UI", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    --bg: #121212; --surface: #1E1E1F; --surface-hover: #28282A; --surface-pressed: #323234;
+    --border: #2C2C2E; --border-strong: #3A3A3D; --text: #F2F2F2; --text-secondary: #A0A0A5; --text-disabled: #5E5E62;
+    --accent: #E5484D; --accent-hover: #EC6A6E; --accent-pressed: #C93C41; --accent-soft: #3A1E20; --on-accent: #FFFFFF;
+    --success: #3DD68C; --success-soft: #15301F; --warning: #F5B544; --warning-soft: #33280F; --danger: #E5484D;
+    --track: #2E2E30; --stage: #0A0A0B; --stage-text: #77777C;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.4 var(--font); display: flex; flex-direction: column; -webkit-font-smoothing: antialiased; }
+  .ic { display: block; flex: none; }
+  button, input, select { font: inherit; color: inherit; }
+
+  /* ---------- header ---------- */
+  #header { background: var(--bg); border-bottom: 1px solid var(--border); padding: 14px var(--gutter) 12px; display: flex; flex-direction: column; gap: 12px; flex: none; }
+  .head-top { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand { display: flex; align-items: center; gap: 12px; border: 1px solid transparent; background: transparent; padding: 3px 8px 3px 3px; margin-left: -4px; border-radius: 12px; cursor: pointer; position: relative; }
+  .brand:hover, .brand[aria-expanded="true"] { background: var(--surface); border-color: var(--border); }
+  .badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; flex: none; }
+  .brand .badge { width: 34px; height: 34px; background: var(--accent); color: var(--on-accent); }
+  .brand-name { font-size: 18px; font-weight: 800; }
+  .brand-caret { color: var(--text-secondary); font-size: 11px; margin-left: -4px; }
+  .head-divider { width: 1px; height: 22px; background: var(--border); margin: 0 4px; flex: none; }
+  .project-button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid transparent; border-radius: 10px; padding: 7px 10px; font-size: 15px; font-weight: 600; background: transparent; cursor: pointer; color: var(--text); min-width: 0; }
+  .project-button .ic { color: var(--text-secondary); }
+  .project-button:hover:not(:disabled) { background: var(--surface); border-color: var(--border); }
+  .project-button span.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+  .head-spacer { flex: 1; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 12px; border: 1px solid var(--border); border-radius: 18px; background: var(--bg); color: var(--text-secondary); cursor: pointer; white-space: nowrap; }
+  .pill:hover { background: var(--surface); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-disabled); flex: none; }
+  .dot.success { background: var(--success); } .dot.warning { background: var(--warning); } .dot.danger { background: var(--danger); }
+  nav.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  nav.tabs button { display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; border-radius: 10px; padding: 0 14px; min-height: 36px; color: var(--text-secondary); font-size: 14px; font-weight: 600; cursor: pointer; }
+  nav.tabs button:hover { background: var(--surface); color: var(--text); }
+  nav.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }
+
+  /* app switcher and menus */
+  .menu { position: absolute; z-index: 30; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 6px; box-shadow: 0 12px 32px rgba(0,0,0,.14); min-width: 240px; }
+  .menu button, .menu a { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 12px 8px 10px; border-radius: 8px; background: transparent; border: none; cursor: pointer; color: var(--text); text-decoration: none; font-size: 14px; }
+  .menu button:hover:not(:disabled), .menu a:hover { background: var(--surface-hover); }
+  .menu button:disabled { color: var(--text-disabled); cursor: default; }
+  .menu .ic { color: var(--text-secondary); }
+  .menu hr { border: none; border-top: 1px solid var(--border); margin: 4px 6px; }
+  .app-item { align-items: flex-start !important; }
+  .app-item .badge { width: 32px; height: 32px; }
+  .app-item .t { display: flex; flex-direction: column; }
+  .app-item .t b { font-size: 14px; }
+  .app-item .t small { color: var(--text-secondary); font-size: 12px; }
+  .app-item.current { background: var(--surface); }
+  .app-item .check { margin-left: auto; color: var(--accent); align-self: center; }
+  .sensds-badge { background: #0f2340; }
+
+  /* ---------- controls ---------- */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); border-radius: 10px; padding: 0 16px; min-height: calc(var(--control-h) - 2px); font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .btn:hover:not(:disabled) { background: var(--surface-hover); }
+  .btn:active:not(:disabled) { background: var(--surface-pressed); }
+  .btn:disabled { color: var(--text-disabled); border-color: var(--border); cursor: default; }
+  .btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .btn.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn.primary:active:not(:disabled) { background: var(--accent-pressed); }
+  .btn.primary:disabled { background: var(--track); border-color: var(--track); color: var(--text-disabled); }
+  .btn.danger { color: var(--danger); }
+  .btn.danger:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--danger); }
+  .btn.danger:disabled { color: var(--text-disabled); }
+  .btn.stop { background: var(--danger); color: var(--on-accent); border-color: var(--danger); border-radius: 12px; font-size: 16px; font-weight: 800; padding: 0 22px; min-height: 44px; }
+  .btn.stop:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+  .btn.ghost:hover:not(:disabled) { background: var(--surface-hover); color: var(--text); }
+  .btn.icon { width: calc(var(--control-h) - 2px); padding: 0; border-color: var(--border); }
+  .btn.large { min-height: 44px; padding: 0 22px; font-size: 15px; border-radius: 12px; }
+  .btn.small { min-height: 30px; padding: 0 12px; font-size: 13px; border-radius: 8px; }
+  input.field, select.field { background: var(--bg); border: 1px solid var(--border-strong); border-radius: 10px; padding: 0 10px; min-height: calc(var(--control-h) - 2px); outline: none; min-width: 0; }
+  input.field:focus, select.field:focus { border-color: var(--accent); }
+  input.field:disabled, select.field:disabled { color: var(--text-disabled); border-color: var(--border); }
+  select.device { width: 220px; }
+  .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 3px; gap: 2px; }
+  .seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 1; background: transparent; border: 1px solid transparent; border-radius: 9px; padding: 0 16px; min-height: 30px; color: var(--text-secondary); font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .seg button:hover:not(:disabled) { color: var(--text); }
+  .seg button[aria-pressed="true"] { background: var(--bg); border-color: var(--border); color: var(--text); }
+  .seg button[aria-pressed="true"] .ic { color: var(--accent); }
+  .seg button:disabled { color: var(--text-disabled); cursor: default; }
+  .mode-switch { min-width: 240px; }
+  .chip { display: inline-flex; align-items: center; border-radius: 10px; padding: 3px 9px; font-size: 12px; font-weight: 600; background: var(--surface-hover); color: var(--text-secondary); white-space: nowrap; }
+  .chip.success { background: var(--success-soft); color: var(--success); }
+  .chip.warning { background: var(--warning-soft); color: var(--warning); }
+  .chip.accent { background: var(--accent-soft); color: var(--accent); }
+  .overline { color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  .caption { color: var(--text-secondary); font-size: 12px; }
+  .secondary { color: var(--text-secondary); }
+  .heading { font-size: 15px; font-weight: 700; }
+  .title { font-size: 18px; font-weight: 700; }
+  .big-command { font-size: 30px; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
+  .divider { height: 1px; background: var(--border); flex: none; }
+  .swatch { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+  .bar { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; flex: 1; min-width: 40px; }
+  .bar > i { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width .25s ease; }
+  input[type=range] { accent-color: var(--accent); width: 100%; }
+  input[type=checkbox] { accent-color: var(--accent); }
+
+  /* ---------- pages ---------- */
+  main { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
+  .tab-page { flex: 1; min-height: 0; overflow: auto; padding: var(--gutter); display: flex; flex-direction: column; gap: var(--gap); }
+  .page-header { display: flex; align-items: center; gap: 14px; min-height: 52px; flex-wrap: wrap; }
+  .page-header .badge { width: 44px; height: 44px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); }
+  .page-header .titles { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 2px; }
+  .page-header h1 { font-size: 22px; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
+  .page-header p { margin: 0; color: var(--text-secondary); }
+  .page-header .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .body-row { display: flex; gap: var(--gap); flex: 1; min-height: 0; }
+  .col { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: var(--panel-pad); display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0; }
+  .panel-head { display: flex; align-items: center; gap: 10px; min-height: 38px; flex-wrap: wrap; }
+  .panel-head > .ic { color: var(--text-secondary); }
+  .panel-head .heading { margin-right: auto; }
+  .panel-head .trailing { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .panel > p.sub { margin: -6px 0 0; color: var(--text-secondary); }
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .tile .badge { width: 40px; height: 40px; background: var(--surface-hover); color: var(--text-secondary); }
+  .tile .v { font-size: 24px; font-weight: 800; line-height: 1.15; }
+  .scroll { overflow: auto; min-height: 0; }
+  .empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 32px; }
+  .empty .badge { width: 64px; height: 64px; border-radius: 18px; background: var(--accent-soft); color: var(--accent); margin-bottom: 6px; }
+  .empty p { margin: 0; color: var(--text-secondary); max-width: 460px; }
+  .empty .btn { margin-top: 8px; }
+
+  /* stage: dark area for camera, spectrogram and messages */
+  .stage { position: relative; background: var(--stage); border-radius: 12px; overflow: hidden; min-height: 240px; flex: 1; display: flex; }
+  .stage canvas.view { width: 100%; height: 100%; display: block; }
+  .stage-msg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 24px; color: var(--stage-text); }
+  .stage-msg .ic { color: var(--stage-text); }
+  .stage-msg b { color: #E8E8EA; font-size: 15px; }
+  .stage-msg p { margin: 0; max-width: 520px; font-size: 13px; }
+  .stage-msg .row { display: flex; gap: 10px; margin-top: 8px; }
+
+  /* Collect */
+  #collectBody .classes-col { flex: 2; min-width: 360px; }
+  #collectBody .capture-col { flex: 3; min-width: 0; }
+  .class-list { display: flex; flex-direction: column; gap: 10px; }
+  .class-card { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px 14px 16px; display: flex; flex-direction: column; gap: 10px; cursor: pointer; }
+  .class-card:hover { border-color: var(--border-strong); }
+  .class-card.selected { border-color: var(--accent); }
+  .class-card .top { display: flex; align-items: center; gap: 10px; }
+  .class-card .name { flex: 1; font-size: 15px; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .class-card input.name { border: 1px solid var(--accent); border-radius: 8px; padding: 0 8px; min-height: 28px; background: var(--bg); outline: none; font-size: 15px; font-weight: 700; }
+  .class-card .progress { display: flex; align-items: center; gap: 12px; padding-right: 6px; }
+  .class-card .progress .caption { min-width: 96px; text-align: right; }
+  .menu-button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid transparent; background: transparent; display: inline-flex; align-items: center; justify-content: center; color: var(--text-secondary); cursor: pointer; flex: none; }
+  .menu-button:hover { background: var(--surface-hover); border-color: var(--border); }
+  .lock { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-secondary); }
+  .thumbs { display: flex; flex-wrap: wrap; gap: 6px; padding-right: 6px; }
+  .thumb { width: 48px; height: 48px; border-radius: 8px; overflow: hidden; background: var(--surface-hover); position: relative; cursor: pointer; flex: none; border: none; padding: 0; }
+  .thumb img, .thumb canvas { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .del { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(200,16,46,.67); color: #fff; }
+  .thumb:hover .del { display: flex; }
+  .thumb.more { border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-secondary); font-weight: 700; font-size: 13px; }
+  .capture-controls { display: grid; grid-template-columns: 1fr auto auto; gap: 6px var(--gap); align-items: center; }
+  .capture-controls .target { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .capture-controls .target .heading { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #recordButton { min-width: 190px; }
+  .timed-row { grid-row: 3; grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .timed-row input { width: 90px; }
+  .capture-hint { grid-row: 4; grid-column: 1 / -1; }
+  .level { width: 90px; flex: none; }
+  .level > i { background: var(--success); }
+
+  /* Train */
+  #trainBody .left { flex: 2; min-width: 320px; }
+  #trainBody .right { flex: 3; min-width: 0; }
+  .req { display: flex; align-items: flex-start; gap: 10px; }
+  .req .ic { margin-top: 1px; }
+  .req.met .ic { color: var(--success); }
+  .req:not(.met) { color: var(--text-secondary); }
+  .req:not(.met) .ic { color: var(--text-disabled); }
+  .disclosure { display: inline-flex; align-items: center; gap: 4px; border: none; background: transparent; color: var(--text-secondary); font-weight: 600; padding: 4px 6px; border-radius: 6px; cursor: pointer; }
+  .disclosure:hover { color: var(--text); background: var(--surface-hover); }
+  .adv-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px var(--gap); }
+  .adv-grid > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .status-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .status-row .badge { width: 48px; height: 48px; border-radius: 14px; }
+  .status-row .t { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 2px; }
+  .progress-track { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+  .progress-track > i { display: block; height: 100%; background: var(--accent); transition: width .2s; }
+  .charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); }
+  .chart-box { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .chart-box .top { display: flex; align-items: center; gap: 12px; }
+  .legend { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .chart-box canvas { width: 100%; height: 150px; display: block; }
+  .details { display: grid; grid-template-columns: 2fr 3fr; gap: calc(var(--gap) * 2); }
+  .acc-row { display: flex; flex-direction: column; gap: 4px; }
+  .acc-row .top, .acc-row .bottom { display: flex; align-items: center; gap: 8px; }
+  .acc-row .top span.n { flex: 1; min-width: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .acc-row .bottom { gap: 10px; }
+  .acc-row .bar { height: 6px; }
+  .matrix { display: grid; gap: 3px; align-items: center; font-size: 12px; }
+  .matrix .cell { aspect-ratio: 1; max-width: 44px; min-width: 18px; border-radius: 6px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+  .matrix .rowname { display: flex; align-items: center; gap: 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-right: 8px; }
+  .matrix .colname { color: var(--text-secondary); text-align: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 44px; }
+  .confetti { position: absolute; inset: 0; pointer-events: none; }
+
+  /* Test */
+  #testBody .input-col { flex: 3; min-width: 0; }
+  #testBody .pred-col { flex: 2; min-width: 380px; }
+  .pred-rows { display: flex; flex-direction: column; gap: 8px; }
+  .pred-row { border: 1px solid var(--border); background: var(--bg); border-radius: 12px; padding: 9px 14px; display: flex; flex-direction: column; gap: 8px; height: 58px; justify-content: center; }
+  .pred-row.top { background: color-mix(in srgb, var(--c) 12%, var(--bg)); border-color: color-mix(in srgb, var(--c) 55%, transparent); }
+  .pred-row .line { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
+  .pred-row .line .n { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pred-row .line .p { color: var(--text-secondary); font-weight: 600; width: 52px; text-align: right; }
+  .pred-row.top .line .p { color: var(--text); font-weight: 700; }
+  .pred-row .track { height: 12px; border-radius: 6px; background: var(--track); overflow: hidden; }
+  .pred-row .track > i { display: block; height: 100%; border-radius: 6px; background: var(--c); min-width: 0; transition: width .18s ease-out; }
+  .stats-row { display: flex; align-items: center; gap: var(--gap); flex-wrap: wrap; }
+  .stats-row .caption:first-child { flex: 1; }
+
+  /* Robot */
+  #robotBody .left { flex: 2; min-width: 360px; }
+  #robotBody .right { flex: 3; min-width: 0; }
+  .driving-row { display: flex; gap: var(--gap); flex-wrap: wrap; }
+  .driving-row .stage { flex: 5; height: 250px; min-height: 0; min-width: 260px; }
+  .readout { flex: 4; display: flex; flex-direction: column; gap: 6px; min-width: 200px; }
+  .readout .cmd { display: flex; align-items: center; gap: 12px; }
+  .readout .cmd .badge { width: 52px; height: 52px; border-radius: 14px; background: var(--surface-hover); color: var(--text-secondary); }
+  .readout .cmd .badge.moving { background: var(--accent); color: var(--on-accent); }
+  .action-row { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px 8px 16px; display: flex; align-items: center; gap: 12px; }
+  .action-row.selected { border-color: var(--accent); }
+  .action-row .heading { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .action-row select { width: 190px; }
+  .slider-row { display: flex; align-items: center; gap: 12px; }
+  .slider-row .heading { min-width: 44px; text-align: right; }
+  .inline-row { display: flex; align-items: center; gap: 12px; }
+
+  /* Data */
+  #dataBody .left { flex: 3; min-width: 0; }
+  #dataBody .right { flex: 2; min-width: 340px; }
+  table.classes { width: 100%; border-collapse: collapse; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  table.classes th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--text-secondary); padding: 12px; border-bottom: 1px solid var(--border); }
+  table.classes td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  table.classes tr:last-child td { border-bottom: none; }
+  table.classes td:first-child { display: flex; align-items: center; gap: 10px; }
+  .info-row { display: flex; gap: var(--gap); }
+  .info-row > span:first-child { width: 84px; flex: none; color: var(--text-secondary); }
+  .info-row > span:last-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .model-row { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .model-row .top { display: flex; align-items: center; gap: 10px; }
+  .model-row .top .heading { flex: 1; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* status bar */
+  #statusbar { flex: none; display: flex; align-items: center; gap: 12px; padding: 6px var(--gutter); border-top: 1px solid var(--border); min-height: 30px; font-size: 12px; color: var(--text-secondary); }
+  #statusText { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* dialogs */
+  dialog { border: 1px solid var(--border); border-radius: 16px; padding: var(--gutter); background: var(--bg); color: var(--text); box-shadow: 0 24px 64px rgba(0,0,0,.25); max-width: min(92vw, 560px); }
+  dialog::backdrop { background: rgba(0,0,0,.35); }
+  dialog .dlg { display: flex; flex-direction: column; gap: var(--gap); }
+  dialog .dlg-head { display: flex; align-items: center; gap: 14px; }
+  dialog .dlg-head .badge { width: 44px; height: 44px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); }
+  dialog .dlg-head .t { display: flex; flex-direction: column; gap: 2px; }
+  dialog p { margin: 0; color: var(--text-secondary); }
+  dialog .dlg-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+  #projectDialog { max-width: min(94vw, 900px); width: 900px; }
+  .project-cols { display: flex; gap: var(--gap); align-items: stretch; flex-wrap: wrap; }
+  .project-cols .new-panel { width: 320px; flex: none; }
+  .project-cols .list-panel { flex: 1; min-width: 300px; }
+  .project-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow: auto; }
+  .project-item { text-align: left; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+  .project-item:hover { border-color: var(--border-strong); }
+  .project-item[aria-selected="true"] { border-color: var(--accent); }
+  .project-item .top { display: flex; align-items: center; gap: 8px; }
+  .folder-note { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #samplesDialog { max-width: min(94vw, 780px); width: 780px; }
+  #samplesDialog .thumbs { max-height: 60vh; overflow: auto; }
+  #samplesDialog .thumb { width: 96px; height: 96px; }
+
+  @media (max-width: 1100px) {
+    .body-row { flex-direction: column; flex: none; }
+    .body-row > .panel, .body-row > .col { flex: none !important; min-width: 0 !important; }
+    .scroll, .col.scroll { overflow: visible; }
+    .stage { flex: none; height: min(62vw, 440px); min-height: 260px; }
+    .driving-row .stage { height: 250px; }
+    .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .empty { flex: none; min-height: 60vh; }
+  }
+  @media (max-width: 700px) {
+    :root { --gutter: 16px; }
+    .mode-switch { min-width: 0; }
+    .head-top { flex-wrap: wrap; }
+    .robot-pill-text { display: none; }
+    .details, .charts { grid-template-columns: 1fr; }
+    .capture-controls { grid-template-columns: 1fr; }
+    .capture-controls > * { grid-area: auto !important; }
+    select.device { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header id="header">
+  <div class="head-top">
+    <button class="brand" id="brandButton" aria-haspopup="menu" aria-expanded="false" title="Switch between SensDS and SensAV">
+      <span class="badge" data-icon="wave" data-size="20"></span>
+      <span class="brand-name">SensAV</span>
+      <span class="brand-caret">▾</span>
+    </button>
+    <div class="menu" id="appMenu" role="menu" hidden style="top: 58px; left: 20px;">
+      <a class="app-item" href="../" role="menuitem">
+        <span class="badge sensds-badge"><img src="../assets/logo-mark.png" alt="" width="32" height="32" style="border-radius:8px"></span>
+        <span class="t"><b>SensDS</b><small>Radar gestures with the Infineon sensor</small></span>
+      </a>
+      <a class="app-item current" href="./" role="menuitem" aria-current="page">
+        <span class="badge" style="background:var(--accent);color:var(--on-accent)" data-icon="wave" data-size="18"></span>
+        <span class="t"><b>SensAV</b><small>Pictures and sounds with the camera and microphone</small></span>
+        <span class="check" data-icon="check" data-size="16"></span>
+      </a>
+    </div>
+    <span class="head-divider"></span>
+    <button class="project-button" id="projectButton" aria-haspopup="menu"><span data-icon="folder"></span><span class="name" id="projectName">No project</span><span>▾</span></button>
+    <div class="menu" id="projectMenu" role="menu" hidden style="top: 58px;">
+      <button data-act="open"><span data-icon="folder" data-size="16"></span>New or open project</button>
+      <hr>
+      <button data-act="rename" class="needs-project"><span data-icon="pencil" data-size="16"></span>Rename project</button>
+      <button data-act="save" class="needs-project"><span data-icon="save" data-size="16"></span>Save</button>
+      <button data-act="folder"><span data-icon="open" data-size="16"></span>Change data folder</button>
+    </div>
+    <span class="head-spacer"></span>
+    <div class="seg mode-switch" id="modeSwitch" title="Switch between the image model and the audio model">
+      <button data-value="image" aria-pressed="true"><span data-icon="camera" data-size="16"></span>Image</button>
+      <button data-value="audio" aria-pressed="false"><span data-icon="mic" data-size="16"></span>Audio</button>
+    </div>
+    <span class="head-spacer"></span>
+    <button class="pill" id="robotPill" title="Open the Robot tab to connect"><span data-icon="robot" data-size="16"></span><span class="robot-pill-text" id="robotPillText">Robot offline</span><span class="dot" id="robotDot"></span></button>
+    <button class="btn icon" id="themeButton" title="Switch to dark theme"><span data-icon="moon"></span></button>
+  </div>
+  <nav class="tabs" id="tabs" role="tablist">
+    <button role="tab" data-tab="collect" aria-selected="true" title="Collect (Ctrl+1)"><span data-icon="collect"></span>Collect</button>
+    <button role="tab" data-tab="train" aria-selected="false" title="Train (Ctrl+2)"><span data-icon="train"></span>Train</button>
+    <button role="tab" data-tab="test" aria-selected="false" title="Test (Ctrl+3)"><span data-icon="test"></span>Test</button>
+    <button role="tab" data-tab="robot" aria-selected="false" title="Robot (Ctrl+4)"><span data-icon="robot"></span>Robot</button>
+    <button role="tab" data-tab="data" aria-selected="false" title="Data (Ctrl+5)"><span data-icon="data"></span>Data</button>
+  </nav>
+</header>
+
+<main id="main">
+  <!-- shown instead of a tab until a data folder and a project are open -->
+  <section class="tab-page" id="noFolder" hidden>
+    <div class="empty">
+      <span class="badge" data-icon="folder" data-size="30"></span>
+      <div class="title">Choose where SensAV keeps your work</div>
+      <p id="noFolderText">Pick a folder for your projects, photos and recordings. To share projects with the SensAV desktop app, pick its SensAV_data folder in your home folder.</p>
+      <div class="btn-row" style="justify-content:center">
+        <button class="btn primary" id="chooseFolderButton"><span data-icon="folder"></span>Choose a folder</button>
+        <button class="btn" id="browserStorageButton">Keep it in this browser</button>
+      </div>
+      <p class="caption" id="noFolderNote"></p>
+    </div>
+  </section>
+  <section class="tab-page" id="reconnectFolder" hidden>
+    <div class="empty">
+      <span class="badge" data-icon="folder" data-size="30"></span>
+      <div class="title">Allow access to your SensAV folder</div>
+      <p>The browser needs your permission again to open <b id="reconnectName"></b>.</p>
+      <div class="btn-row" style="justify-content:center">
+        <button class="btn primary" id="reconnectButton"><span data-icon="folder"></span>Allow access</button>
+        <button class="btn" id="otherFolderButton">Choose a different folder</button>
+      </div>
+    </div>
+  </section>
+  <section class="tab-page" id="noProject" hidden>
+    <div class="empty">
+      <span class="badge" data-icon="folder" data-size="30"></span>
+      <div class="title">No project open</div>
+      <p id="noProjectText">Create or open a project to start collecting samples.</p>
+      <button class="btn primary" id="noProjectButton"><span data-icon="folder"></span>Open or create a project</button>
+    </div>
+  </section>
+
+  <!-- ========== Collect ========== -->
+  <section class="tab-page" id="page-collect" hidden>
+    <div class="page-header">
+      <span class="badge" data-icon="collect" data-size="22"></span>
+      <div class="titles"><h1>Collect samples</h1><p id="collectSubtitle"></p></div>
+    </div>
+    <div class="body-row" id="collectBody">
+      <div class="panel classes-col">
+        <div class="panel-head"><span data-icon="layers"></span><span class="heading">Classes</span>
+          <div class="trailing"><span class="chip" id="classCount">0</span><button class="btn primary small" id="addClassButton"><span data-icon="plus" data-size="16"></span>Add class</button></div>
+        </div>
+        <div class="scroll" style="flex:1"><div class="class-list" id="classList"></div></div>
+      </div>
+      <div class="panel capture-col">
+        <div class="panel-head"><span id="captureIcon" data-icon="camera"></span><span class="heading" id="captureTitle">Camera</span>
+          <div class="trailing">
+            <span class="bar level" id="micLevel" hidden title="Microphone level"><i style="width:0%"></i></span>
+            <select class="field device" id="collectDevice"></select>
+            <span class="chip" id="captureChip">Off</span>
+            <button class="btn small" id="powerButton"><span id="powerIcon" data-icon="camera" data-size="16"></span><span id="powerText">Turn on</span></button>
+          </div>
+        </div>
+        <div class="stage" id="collectStage">
+          <canvas class="view" id="collectCam" hidden></canvas><canvas class="view" id="collectSpec" hidden></canvas>
+          <div class="stage-msg" id="collectMsg"></div>
+        </div>
+        <p class="secondary" id="collectNotice" hidden style="margin:0"></p>
+        <div class="capture-controls">
+          <span class="overline" style="grid-area:1/1">Recording into</span>
+          <span class="overline" id="captureModeCaption" style="grid-area:1/2">Capture mode</span>
+          <div class="target" style="grid-area:2/1"><span class="swatch" id="targetSwatch"></span><span class="heading" id="targetName">Add a class to begin</span></div>
+          <div class="seg" id="captureMode" style="grid-area:2/2" title="Hold: record while you hold the button. Toggle: click to start and click to stop. Timed: count down, then record a set number.">
+            <button data-value="hold" aria-pressed="true">Hold</button><button data-value="toggle" aria-pressed="false">Toggle</button><button data-value="burst" aria-pressed="false">Timed</button>
+          </div>
+          <button class="btn primary" id="recordButton" style="grid-area:2/3"><span data-icon="record"></span><span id="recordText">Hold to record</span></button>
+          <div class="timed-row" id="timedRow" hidden>
+            <span class="secondary">Count down</span><input class="field" type="number" id="countdownInput" min="0" max="10"><span class="secondary">s</span>
+            <span class="secondary" style="margin-left:8px">then record</span><input class="field" type="number" id="burstInput" min="5" max="300" step="5"><span class="secondary" id="burstUnit">samples</span>
+          </div>
+          <span class="caption capture-hint" id="captureHint"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Train ========== -->
+  <section class="tab-page" id="page-train" hidden>
+    <div class="page-header">
+      <span class="badge" data-icon="train" data-size="22"></span>
+      <div class="titles"><h1 id="trainTitle">Train</h1><p>The model learns from most of your samples and is tested on the rest, just like Teachable Machine.</p></div>
+      <div class="actions">
+        <button class="btn danger large" id="stopTrainButton" hidden><span data-icon="stop"></span>Stop</button>
+        <button class="btn primary large" id="trainButton"><span data-icon="bolt"></span><span id="trainButtonText">Train model</span></button>
+      </div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><span class="badge" data-icon="layers" data-size="20"></span><div><div class="v" id="tileClasses">0</div><div class="caption">classes ready</div></div></div>
+      <div class="tile"><span class="badge" id="tileSamplesIcon" data-icon="image" data-size="20"></span><div><div class="v" id="tileSamples">0</div><div class="caption">samples</div></div></div>
+      <div class="tile"><span class="badge" data-icon="target" data-size="20"></span><div><div class="v" id="tileAccuracy">Not yet</div><div class="caption">validation accuracy</div></div></div>
+      <div class="tile"><span class="badge" data-icon="clock" data-size="20"></span><div><div class="v" id="tileTime">Not yet</div><div class="caption">training time</div></div></div>
+    </div>
+    <div class="body-row" id="trainBody">
+      <div class="col left">
+        <div class="panel" style="flex:1">
+          <div class="panel-head"><span data-icon="check_circle"></span><span class="heading">Checklist</span><div class="trailing"><span class="chip" id="checklistChip"></span></div></div>
+          <p class="sub">Everything here needs a check before you can train.</p>
+          <span class="bar" style="flex:none"><i id="checklistBar" style="width:0%"></i></span>
+          <div id="checklist" style="display:flex;flex-direction:column;gap:10px"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span data-icon="sliders"></span><span class="heading">Advanced</span><div class="trailing"><button class="disclosure" id="advancedToggle"><span id="advancedText">Show</span><span id="advancedIcon" data-icon="chevron_right" data-size="14"></span></button></div></div>
+          <p class="sub">The same settings Teachable Machine uses. The defaults work well for most projects.</p>
+          <div id="advanced" hidden>
+            <div class="adv-grid">
+              <div><span class="overline">Epochs</span><input class="field" type="number" id="epochsInput" min="1" max="1000" title="One epoch means every training sample has been shown to the model once."></div>
+              <div><span class="overline">Batch size</span><select class="field" id="batchInput" title="How many samples the model looks at before each small update."><option>16</option><option>32</option><option>64</option><option>128</option><option>256</option><option>512</option></select></div>
+              <div><span class="overline">Learning rate</span><input class="field" type="number" id="lrInput" min="0.00001" max="1" step="0.0005" title="How big each update step is. Small changes here can make a big difference."></div>
+            </div>
+            <button class="btn ghost small" id="resetAdvanced" style="margin-top:10px">Reset defaults</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel right" id="resultsPanel" style="position:relative">
+        <div class="panel-head"><span data-icon="chart"></span><span class="heading">Training</span><div class="trailing"><span class="chip" id="modelChip">Not trained</span></div></div>
+        <div class="empty" id="resultsEmpty">
+          <span class="badge" data-icon="chart" data-size="30"></span>
+          <div class="title">No training yet</div>
+          <p>When you train, you will see accuracy and loss change after every epoch, then how well the model does on samples it never saw during training.</p>
+        </div>
+        <div class="scroll" id="results" hidden style="display:flex;flex-direction:column;gap:var(--gap)">
+          <div class="status-row">
+            <span class="badge" id="statusBadge" data-icon="train" data-size="24"></span>
+            <div class="t"><span class="title" id="statusTitle"></span><span class="secondary" id="statusSubtitle"></span></div>
+            <button class="btn primary" id="tryTestButton"><span data-icon="test"></span>Try it on Test</button>
+          </div>
+          <div class="progress-track" id="trainProgress"><i style="width:0%"></i></div>
+          <div class="charts">
+            <div class="chart-box"><div class="top"><span class="overline" style="flex:1">Accuracy per epoch</span><span class="legend caption"><i style="background:#2F6FED"></i>Training</span><span class="legend caption"><i style="background:#F07F2A"></i>Validation</span></div><canvas id="accChart"></canvas></div>
+            <div class="chart-box"><div class="top"><span class="overline" style="flex:1">Loss per epoch</span><span class="legend caption"><i style="background:#2F6FED"></i>Training</span><span class="legend caption"><i style="background:#F07F2A"></i>Validation</span></div><canvas id="lossChart"></canvas></div>
+          </div>
+          <div id="details" style="display:flex;flex-direction:column;gap:var(--gap)">
+            <div class="divider"></div>
+            <div class="details">
+              <div style="display:flex;flex-direction:column;gap:10px"><span class="overline">Accuracy per class</span><div id="classAccuracy" style="display:flex;flex-direction:column;gap:10px"></div></div>
+              <div style="display:flex;flex-direction:column;gap:10px;min-width:0"><span class="overline">Confusion matrix</span><div id="matrix"></div><span class="caption">Rows are the real class. Columns are what the model guessed. Numbers on the diagonal are correct guesses.</span></div>
+            </div>
+            <span class="caption" id="detailsNote"></span>
+          </div>
+        </div>
+        <canvas class="confetti" id="confetti" hidden></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Test ========== -->
+  <section class="tab-page" id="page-test" hidden>
+    <div class="empty" id="testNoModel" hidden>
+      <span class="badge" data-icon="test" data-size="30"></span>
+      <div class="title" id="testNoModelTitle">Train a model first</div>
+      <p id="testNoModelBody"></p>
+      <button class="btn primary" id="goTrainButton"><span data-icon="folder"></span>Go to Train</button>
+    </div>
+    <div class="page-header" id="testHeader">
+      <span class="badge" data-icon="test" data-size="22"></span>
+      <div class="titles"><h1 id="testTitle">Test</h1><p id="testSubtitle"></p></div>
+      <div class="actions">
+        <button class="btn danger large" id="stopTestButton" hidden><span data-icon="stop"></span>Stop testing</button>
+        <button class="btn primary large" id="startTestButton"><span data-icon="test"></span>Start testing</button>
+      </div>
+    </div>
+    <div class="body-row" id="testBody">
+      <div class="panel input-col">
+        <div class="panel-head"><span id="testInputIcon" data-icon="camera"></span><span class="heading" id="testInputTitle">Live camera</span>
+          <div class="trailing"><select class="field device" id="testDevice"></select><span class="chip" id="testChip">Off</span></div>
+        </div>
+        <div class="stage"><canvas class="view" id="testCam" hidden></canvas><canvas class="view" id="testSpec" hidden></canvas><div class="stage-msg" id="testMsg"></div></div>
+        <div class="stats-row"><span class="caption" id="testStats"></span><span class="caption" id="speedCaption">Speed</span><div class="seg" id="speedSwitch" title="Slow this down if the computer struggles to keep up."></div></div>
+      </div>
+      <div class="panel pred-col">
+        <div class="panel-head"><span data-icon="list"></span><span class="heading">Predictions</span><div class="trailing"><span class="chip" id="testModelChip"></span></div></div>
+        <span class="overline">Top prediction</span>
+        <div class="big-command" id="topName">Nothing yet</div>
+        <span class="secondary" id="topDetail">Start testing to see what the model thinks.</span>
+        <div class="divider"></div>
+        <span class="overline">Confidence for each class</span>
+        <div class="pred-rows scroll" id="predRows" style="flex:1"></div>
+        <span class="caption" id="staleNote" hidden></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Robot ========== -->
+  <section class="tab-page" id="page-robot" hidden>
+    <div class="page-header">
+      <span class="badge" data-icon="robot" data-size="22"></span>
+      <div class="titles"><h1>Drive your robot</h1><p>Match each class to a move, then let your trained model steer the VEX AIM robot.</p></div>
+      <div class="actions">
+        <button class="btn large" id="driveButton"><span data-icon="robot"></span>Start driving</button>
+        <button class="btn large" id="stopDriveButton" hidden><span data-icon="minus"></span>Stop driving</button>
+        <button class="btn stop" id="estopButton" title="Stops the robot right away. You can also press the space bar." style="min-width:210px"><span data-icon="stop"></span>Emergency Stop</button>
+      </div>
+    </div>
+    <div class="body-row" id="robotBody">
+      <div class="col left scroll">
+        <div class="panel">
+          <div class="panel-head"><span data-icon="wifi"></span><span class="heading">Connection</span><div class="trailing"><span class="chip" id="linkChip">Offline</span></div></div>
+          <span class="overline">Robot address</span>
+          <div class="inline-row"><input class="field" id="hostInput" placeholder="192.168.4.1" style="flex:1"><button class="btn primary" id="connectButton"><span data-icon="wifi"></span><span id="connectText">Connect</span></button></div>
+          <div class="inline-row" id="batteryRow" hidden><span id="batteryIcon" data-icon="battery" class="secondary"></span><span class="secondary" id="batteryText" style="flex:1"></span><button class="btn small" id="reconnectRobot"><span data-icon="wifi" data-size="16"></span>Reconnect</button></div>
+          <span class="caption" id="connectionNote"></span>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span data-icon="shield"></span><span class="heading">Safety</span></div>
+          <span class="overline">Confidence threshold</span>
+          <div class="slider-row"><input type="range" id="thresholdInput" min="10" max="95" step="5"><span class="heading" id="thresholdValue">50%</span></div>
+          <span class="caption">If no class is at least this sure, the robot stops.</span>
+          <div class="divider"></div>
+          <span class="overline">Steady predictions</span>
+          <div class="inline-row"><input class="field" type="number" id="smoothingInput" min="1" max="10" style="width:90px"><span class="secondary">predictions in a row before the robot changes what it is doing</span></div>
+          <div class="divider"></div>
+          <span class="overline">Speed</span>
+          <div class="seg" id="speedSeg" style="display:flex"><button data-value="slow">Slow</button><button data-value="medium">Medium</button><button data-value="fast">Fast</button></div>
+          <div class="divider"></div>
+          <span class="caption">The robot also stops when predictions stop, when you leave this tab, if the connection drops, or when the page closes.</span>
+        </div>
+      </div>
+      <div class="col right">
+        <div class="panel">
+          <div class="panel-head"><span data-icon="robot"></span><span class="heading">Driving</span>
+            <div class="trailing"><span class="caption">Controlled by</span>
+              <div class="seg" id="sourceSwitch"><button data-value="image"><span data-icon="camera" data-size="16"></span>Image</button><button data-value="audio"><span data-icon="mic" data-size="16"></span>Audio</button></div>
+              <span class="chip" id="driveChip">Stopped</span></div>
+          </div>
+          <div class="driving-row">
+            <div class="stage"><canvas class="view" id="robotCam" hidden></canvas><canvas class="view" id="robotSpec" hidden></canvas><div class="stage-msg" id="robotMsg"></div></div>
+            <div class="readout">
+              <span class="overline">Now sending</span>
+              <div class="cmd"><span class="badge" id="commandBadge" data-icon="stop" data-size="28"></span><span class="big-command" id="commandText">Stop</span></div>
+              <span class="caption" id="sentNote"></span>
+              <span class="overline" style="margin-top:8px">Because</span>
+              <span class="heading" id="becauseText">Not driving yet</span>
+              <span class="overline" style="margin-top:8px">Live prediction</span>
+              <span class="secondary" id="liveText">Nothing yet</span>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="flex:1">
+          <div class="panel-head"><span data-icon="layers"></span><span class="heading">Class actions</span></div>
+          <p class="sub" id="mappingHint"></p>
+          <div class="scroll" style="flex:1;display:flex;flex-direction:column;gap:8px" id="actionRows"></div>
+          <span class="caption" id="modelNote" hidden></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Data ========== -->
+  <section class="tab-page" id="page-data" hidden>
+    <div class="page-header">
+      <span class="badge" data-icon="data" data-size="22"></span>
+      <div class="titles"><h1>Project data</h1><p id="dataSubtitle"></p></div>
+      <div class="actions">
+        <button class="btn primary" id="dataSave" title="Your work also saves automatically"><span data-icon="save"></span>Save</button>
+      </div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><span class="badge" data-icon="camera" data-size="20"></span><div><div class="v" id="tileImageClasses">0</div><div class="caption">image classes</div></div></div>
+      <div class="tile"><span class="badge" data-icon="image" data-size="20"></span><div><div class="v" id="tileImages">0</div><div class="caption">images</div></div></div>
+      <div class="tile"><span class="badge" data-icon="mic" data-size="20"></span><div><div class="v" id="tileAudioClasses">0</div><div class="caption">audio classes</div></div></div>
+      <div class="tile"><span class="badge" data-icon="wave" data-size="20"></span><div><div class="v" id="tileClips">0</div><div class="caption">audio clips</div></div></div>
+    </div>
+    <div class="body-row" id="dataBody" style="flex:none">
+      <div class="col left">
+        <div class="panel">
+          <div class="panel-head"><span data-icon="list"></span><span class="heading">All classes</span><div class="trailing"><span class="chip" id="allClassesChip">0</span></div></div>
+          <div style="overflow-x:auto"><table class="classes"><thead><tr><th>CLASS</th><th>MODEL</th><th>SAMPLES</th><th>ROBOT ACTION</th></tr></thead><tbody id="classTable"></tbody></table></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span data-icon="chart"></span><span class="heading">Export for CODAP</span></div>
+          <p class="sub">One row per sample, with simple measurements plus two PCA numbers from the model's view of each sample.</p>
+          <div class="progress-track" id="exportProgress" hidden><i style="width:0%"></i></div>
+          <div class="btn-row">
+            <button class="btn small" id="exportImages"><span data-icon="image" data-size="16"></span>Image samples</button>
+            <button class="btn small" id="exportAudio"><span data-icon="wave" data-size="16"></span>Audio clips</button>
+            <button class="btn small" id="exportSessions"><span data-icon="robot" data-size="16"></span>Test and robot sessions</button>
+          </div>
+          <span class="caption" id="exportNote"></span>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span data-icon="shield"></span><span class="heading">Research log</span></div>
+          <div class="info-row"><span>Session ID</span><span id="participantValue">Not set</span></div>
+          <div class="info-row"><span>Log file</span><span class="caption" id="logValue">Not started</span></div>
+          <div class="btn-row">
+            <button class="btn small" id="changeParticipant"><span data-icon="pencil" data-size="16"></span>Change session ID</button>
+            <button class="btn small" id="exportEvents"><span data-icon="save" data-size="16"></span>Export event log</button>
+          </div>
+          <label class="inline-row" style="gap:8px;cursor:pointer"><input type="checkbox" id="askParticipant">Ask for a session ID when the page opens</label>
+        </div>
+      </div>
+      <div class="col right">
+        <div class="panel">
+          <div class="panel-head"><span data-icon="folder"></span><span class="heading">Project</span></div>
+          <div class="info-row"><span>Name</span><span id="infoName"></span></div>
+          <div class="info-row"><span>Created</span><span id="infoCreated"></span></div>
+          <div class="info-row"><span>Updated</span><span id="infoUpdated"></span></div>
+          <div class="info-row"><span>Location</span><span class="caption" id="infoLocation"></span></div>
+          <div class="divider"></div>
+          <div class="btn-row"><button class="btn" style="flex:1" id="dataRename"><span data-icon="pencil"></span>Rename</button><button class="btn" style="flex:1" id="dataOpen"><span data-icon="folder"></span>New or open</button></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span data-icon="train"></span><span class="heading">Trained models</span></div>
+          <p class="sub">Export a model to move it to another computer, or import one a teacher shares.</p>
+          <div id="modelRows" style="display:flex;flex-direction:column;gap:10px"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span data-icon="shield"></span><span class="heading">Privacy</span></div>
+          <p class="secondary" style="margin:0">Everything you collect stays in the folder you chose. Photos and recordings can include faces and voices, so delete anything you do not want to keep: single samples on the Collect tab, whole classes from each class menu, or this entire project.</p>
+          <div><button class="btn danger" id="deleteProjectButton"><span data-icon="trash"></span>Delete this project</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer id="statusbar"><span id="statusText"></span><span id="workText"></span></footer>
+
+<!-- project dialog (app/ui/project_dialog.py) -->
+<dialog id="projectDialog">
+  <div class="dlg">
+    <div class="dlg-head"><span class="badge" data-icon="wave" data-size="22"></span><div class="t"><span style="font-size:22px;font-weight:800" id="projectDialogTitle">Projects</span><span class="secondary">Teach a computer to recognize pictures and sounds, then use it to drive a robot.</span></div></div>
+    <div class="project-cols">
+      <div class="panel new-panel">
+        <div class="panel-head"><span data-icon="plus"></span><span class="heading">New project</span></div>
+        <p class="sub">Give it a name you will recognize later.</p>
+        <input class="field" id="newProjectName" maxlength="40" placeholder="For example: Hand Signals">
+        <button class="btn primary" id="createProjectButton" disabled><span data-icon="plus"></span>Create project</button>
+      </div>
+      <div class="panel list-panel">
+        <div class="panel-head"><span data-icon="folder"></span><span class="heading">Your projects</span><div class="trailing"><span class="chip" id="projectCount">0</span></div></div>
+        <div class="project-list" id="projectList"></div>
+        <span class="secondary" id="noProjects">No projects yet. Create one to get started.</span>
+        <div class="inline-row"><button class="btn danger" id="deleteListedProject"><span data-icon="trash"></span>Delete</button><span style="flex:1"></span><button class="btn primary" id="openProjectButton"><span data-icon="open"></span>Open project</button></div>
+      </div>
+    </div>
+    <div class="folder-note caption"><span data-icon="folder" data-size="14"></span><span id="dialogFolderText"></span><button class="btn ghost small" id="dialogChangeFolder">Change</button><span style="flex:1"></span><button class="btn small" id="closeProjectDialog">Close</button></div>
+  </div>
+</dialog>
+
+<dialog id="messageDialog">
+  <div class="dlg">
+    <div class="dlg-head"><span class="badge" id="messageIcon" data-icon="info" data-size="22"></span><div class="t"><span class="title" id="messageTitle"></span></div></div>
+    <p id="messageBody"></p>
+    <input class="field" id="messageInput" hidden>
+    <div class="dlg-actions"><button class="btn" id="messageCancel">Cancel</button><button class="btn primary" id="messageOk">OK</button></div>
+  </div>
+</dialog>
+
+<dialog id="samplesDialog">
+  <div class="dlg">
+    <div class="dlg-head"><span class="badge" id="samplesIcon" data-icon="image" data-size="22"></span><div class="t"><span class="title" id="samplesTitle"></span><span class="secondary" id="samplesSubtitle"></span></div></div>
+    <div class="thumbs" id="samplesGrid"></div>
+    <div class="dlg-actions"><button class="btn" id="samplesClose">Close</button></div>
+  </div>
+</dialog>
+
+<script type="module" src="../src/sensav/app/main.js"></script>
+</body>
+</html>

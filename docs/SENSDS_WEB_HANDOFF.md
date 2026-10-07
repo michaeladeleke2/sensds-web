@@ -23,6 +23,7 @@ This is a standalone project in its own folder with its own git repo. It is not 
 | `~/sensds-web` | This project. All new code and docs go here. | The only folder to write in |
 | SensDSv2 repo (path given in the session) | Reference for configuration, processing, and visualization | Read only. Never modify, never import from it at runtime |
 | `~/infineon/infineon_sdk_src` | Infineon SDK 3.6.5 source subset | Read only. Never copy into this project or commit |
+| `~/SensAV` | SensAV desktop app (camera and microphone), the reference for `sensav/` | Read only. Never modify, never copy its files in, never depend on it at runtime |
 
 The web app must run with no dependency on either reference folder.
 
@@ -46,6 +47,8 @@ Chrome or Edge on Mac, Windows, Linux, Chromebook. Not Safari, Firefox, iPhone, 
 | Curve Fit tab: freeze, trace, fit 1 to 4 sinusoids (team feedback applied) | Headless only (2026-10-06): traced sine fitted in Chrome; math matches desktop and scipy; live radar not yet run | Not yet run |
 | VEX AIM tab: connect, Single Command, RoboSoccer | Not yet run with a robot. Commands match the desktop byte for byte against a simulated robot; https site reaches a LAN ws:// server once local network access is allowed | Not yet run |
 | Badges: XP, levels, badges, toast, badge list | Headless only (2026-10-06); rules match the desktop | Not yet run |
+| SensAV page (`sensav/`): Collect, Train, Test, Robot, Data with a real camera and microphone | Headless only (2026-10-07, Chrome fake camera and microphone): full image and audio flows, simulated robot; projects open in both directions with the desktop code (see `docs/procedures/sensav.md`) | Not yet run |
+| SensAV with a real VEX AIM robot | Not yet run | Not yet run |
 
 Board identity read by the Step 1 page:
 

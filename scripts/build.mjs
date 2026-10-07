@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'dist');
 
-const isStrata = f => readFileSync(join(root, f), 'utf8').includes('STRATA DERIVED');
+const isStrata = f => f.endsWith('.js') && readFileSync(join(root, f), 'utf8').includes('STRATA DERIVED');
 
 // Static imports (always loaded) and dynamic import() calls (loaded on demand).
 function imports(file) {
@@ -38,12 +38,17 @@ function staticClosure(entries) {
   return { seen, dynamic };
 }
 
-const html = readFileSync(join(root, 'index.html'), 'utf8');
-const entries = [...html.matchAll(/<script[^>]*\ssrc="([^"]+)"/g)].map(m => normalize(m[1]));
+// Two pages: SensDS (index.html) and SensAV (sensav/index.html)
+const PAGES = ['index.html', 'sensav/index.html'];
+const entries = PAGES.flatMap(page => {
+  const html = readFileSync(join(root, page), 'utf8');
+  return [...html.matchAll(/<script[^>]*\ssrc="([^"]+)"/g)].map(m => normalize(join(dirname(page), m[1])));
+});
 const main = staticClosure(entries);
 
-// Code loaded on demand (the radar, on Connect Radar) is included too.
-const files = new Set(['index.html', 'assets/logo-mark.png', 'assets/favicon.png', ...main.seen]);
+// Code loaded on demand (the radar, on Connect Radar) is included too, and the
+// files workers fetch (the SensAV image model weights).
+const files = new Set([...PAGES, 'assets/logo-mark.png', 'assets/favicon.png', ...main.seen]);
 for (const d of new Set(main.dynamic)) for (const f of staticClosure([d]).seen) files.add(f);
 const strata = [...files].filter(isStrata);
 
@@ -54,7 +59,7 @@ let version = (process.env.GITHUB_SHA || '').slice(0, 12);
 if (!version) { try { version = execSync('git rev-parse --short=12 HEAD', { cwd: root }).toString().trim(); } catch { version = String(Date.now()); } }
 const tag = spec => `${spec}?v=${version}`;
 const versioned = (file, text) => {
-  if (file === 'index.html') return text.replace(/(<script[^>]*\ssrc=")([^"?]+\.js)(")/g, (m, a, src, b) => a + tag(src) + b);
+  if (file.endsWith('.html')) return text.replace(/(<script[^>]*\ssrc=")([^"?]+\.js)(")/g, (m, a, src, b) => a + tag(src) + b);
   if (!file.endsWith('.js')) return text;
   return text
     .replace(/(\bfrom\s*|^\s*import\s+|\bimport\s*\(\s*)(['"])(\.{1,2}\/[^'"?]+\.js)\2/gm, (m, a, q, spec) => `${a}${q}${tag(spec)}${q}`)
