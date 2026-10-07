@@ -11,9 +11,11 @@
 
 import { Emitter } from '../app/emitter.js';
 import { actionMessages, programInit, stopMessages } from './protocol.js';
+import { needsLocalNetwork, localNetworkState, LOCAL_NETWORK_HELP, LOCAL_NETWORK_PROMPT } from '../../vex/local_network.js';
 
 export const FAKE_HOST = 'simulated';
 const CONNECT_TIMEOUT_MS = 4000;
+const PROMPT_TIMEOUT_MS = 30000;     // while Chrome's local network question may be open
 const IO_TIMEOUT_MS = 2000;
 const STATUS_INTERVAL_MS = 500;
 
@@ -112,7 +114,20 @@ class Worker {
     let lost = false, cmd, status;
     try {
       try {
-        cmd = this.openSocket('cmd'); sockets.push(cmd); await cmd.open(CONNECT_TIMEOUT_MS);
+        let timeout = CONNECT_TIMEOUT_MS;
+        const lna = !isSimulated(this.host) && needsLocalNetwork(this.host);
+        if (lna) {
+          const state = await localNetworkState();
+          if (state === 'denied') throw new BlockedError('local network access denied');
+          if (state === 'prompt') { timeout = PROMPT_TIMEOUT_MS; this.link.emit('note', LOCAL_NETWORK_PROMPT); }
+        }
+        const t0 = performance.now();
+        cmd = this.openSocket('cmd'); sockets.push(cmd);
+        try { await cmd.open(timeout); } catch (e) {
+          // Refused at once from the https site: Chrome's local network check
+          if (lna && performance.now() - t0 < 1500 && (await localNetworkState()) !== 'granted') throw new BlockedError(e.message);
+          throw e;
+        }
         status = this.openSocket('status'); sockets.push(status); await status.open(CONNECT_TIMEOUT_MS);
         await exchange(cmd, programInit());
       } catch (e) {
@@ -214,7 +229,7 @@ export class RobotLink extends Emitter {
     this._retire(false);
     const blocked = error instanceof BlockedError;
     const message = blocked
-      ? `The browser blocked the connection to ${this.host}. When Chrome asks to let this site find and connect to devices on your local network, choose Allow, then try again.`
+      ? LOCAL_NETWORK_HELP
       : `Robot not reachable at ${this.host}. Make sure the robot is turned on and this computer is connected to the robot's WiFi network, then try again.`;
     this.lastProblem = [blocked ? 'blocked' : 'unreachable', message];
     this.emit('log', 'robot_connection_failed', { host: this.host, detail: String(error?.message ?? error) });

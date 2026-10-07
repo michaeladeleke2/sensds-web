@@ -152,3 +152,43 @@ test('emergency stop works even when not driving; practice mode sends nothing', 
   assert.deepEqual(cmds(), []);
   assert.equal(decisions.at(-1).action, 'forward'); assert.equal(decisions.at(-1).sent, false);
 });
+
+// ---------- Chrome's local network permission, from the https site ----------
+class RefusedSocket {
+  constructor() { this.readyState = 0; setTimeout(() => { this.onerror?.(); this.onclose?.(); }, 5); }
+  send() {} close() {}
+}
+async function withPage(state, fn) {
+  const saved = { location: globalThis.location, navigator: Object.getOwnPropertyDescriptor(globalThis, 'navigator') };
+  globalThis.location = { protocol: 'https:' };
+  Object.defineProperty(globalThis, 'navigator', { value: { permissions: { query: async ({ name }) => { if (name !== 'local-network') throw new TypeError('unknown'); return { state }; } } }, configurable: true });
+  try { await fn(); } finally {
+    globalThis.location = saved.location;
+    if (saved.navigator) Object.defineProperty(globalThis, 'navigator', saved.navigator); else delete globalThis.navigator;
+  }
+}
+
+test('https site: a refused connection without local network permission says how to allow it', async () => {
+  for (const state of ['denied', 'prompt']) {
+    await withPage(state, async () => {
+      const link = new RobotLink({ WebSocketImpl: RefusedSocket }), problems = [], notes = [];
+      link.on('problem', (k, m) => problems.push([k, m])); link.on('note', n => notes.push(n));
+      link.connectTo('192.168.4.1');
+      assert.ok(await until(() => problems.length, 3000));
+      assert.equal(problems[0][0], 'blocked', state);
+      assert.match(problems[0][1], /Local network access/);
+      assert.equal(notes.length, state === 'prompt' ? 1 : 0);
+      assert.equal(link.state, 'disconnected');
+    });
+  }
+});
+
+test('https site with permission granted: a refused connection is "not reachable"', async () => {
+  await withPage('granted', async () => {
+    const link = new RobotLink({ WebSocketImpl: RefusedSocket }), problems = [];
+    link.on('problem', (k, m) => problems.push([k, m]));
+    link.connectTo('192.168.4.1');
+    assert.ok(await until(() => problems.length, 3000));
+    assert.equal(problems[0][0], 'unreachable');
+  });
+});

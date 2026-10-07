@@ -23,7 +23,7 @@ export function initRobot(state, shell) {
   const link = state.robot, driver = state.driver;
   const cameraView = new CameraView($('robotCam')), spectrogramView = new SpectrogramView($('robotSpec'));
   const sources = { image: state.camera, audio: state.microphone };
-  let rows = new Map(), active = false;
+  let rows = new Map(), active = false, connectingNote = '';
 
   const speedSeg = segmented($('speedSeg'), v => { if (state.project) state.updateRobotSettings({ speed: v }); });
   const sourceSeg = segmented($('sourceSwitch'), onSourceChanged);
@@ -45,7 +45,8 @@ export function initRobot(state, shell) {
     emergencyStop();
   });
 
-  link.on('state', () => sync());
+  link.on('state', s => { if (s !== 'connecting') connectingNote = ''; sync(); });
+  link.on('note', text => { connectingNote = text; sync(); });
   link.on('battery', () => sync());
   link.on('problem', (kind, message) => { state.status(message, 8000); sync(); });
   driver.on('active', on => {
@@ -124,6 +125,7 @@ export function initRobot(state, shell) {
     $('batteryRow').hidden = !($('batteryText').textContent || showReconnect);
     $('connectionNote').textContent = link.lastProblem && (ls === 'disconnected' || ls === 'lost') ? link.lastProblem[1]
       : ls === 'connected' ? 'Commands go to the robot while you drive.'
+        : ls === 'connecting' && connectingNote ? connectingNote
         : "Join the robot's WiFi network first. In access point mode the address is 192.168.4.1. Without a robot you can still drive in practice mode and watch the commands. The address simulated tries everything with a pretend robot.";
 
     const on = driver.active, m = on ? driver.mode : state.project.robot.source;

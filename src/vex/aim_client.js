@@ -12,7 +12,10 @@
 // stop_all_movement, with the defaults Robot() sets (drive_speed 100 mm/s,
 // turn_speed 75 deg/s).
 
+import { needsLocalNetwork, localNetworkState, LOCAL_NETWORK_PROMPT } from './local_network.js';
+
 const TIMEOUT_MS = 4000;
+const PROMPT_TIMEOUT_MS = 30000;     // while Chrome's local network question may be open
 const STATUS_INTERVAL_MS = 50;
 const SOCKETS = ['ws_status', 'ws_img', 'ws_cmd', 'ws_audio'];
 const DRIVE_SPEED = 100;
@@ -86,6 +89,14 @@ export class AimRobot {
   }
 
   async connect() {
+    // From the https site Chrome asks for local network access first (see local_network.js)
+    const lna = needsLocalNetwork(this.host);
+    let firstTimeout = this.timeoutMs;
+    if (lna) {
+      const state = await localNetworkState();
+      if (state === 'denied') throw Object.assign(new Error('Local network access is blocked for this site.'), { blocked: true });
+      if (state === 'prompt') { firstTimeout = Math.max(this.timeoutMs, PROMPT_TIMEOUT_MS); this.log(LOCAL_NETWORK_PROMPT); }
+    }
     for (const name of SOCKETS) {
       const url = `ws://${this.host}/${name}`;
       let s;
@@ -98,8 +109,12 @@ export class AimRobot {
         this.close();
         throw Object.assign(new Error(`The browser blocked the connection to ${url} (an https page may not open ws:// connections).`), { blocked: true });
       }
-      try { await s.open(this.timeoutMs); } catch (e) {
+      const t0 = Date.now();
+      try { await s.open(name === SOCKETS[0] ? firstTimeout : this.timeoutMs); } catch (e) {
         this.close();
+        if (lna && Date.now() - t0 < 1500 && (await localNetworkState()) !== 'granted') {
+          throw Object.assign(new Error(`The browser blocked the connection to ${url} (local network access).`), { blocked: true });
+        }
         throw new Error(`Could not connect to ${url} (reason: ${e.message}). Verify that "${this.host}" is the correct IP/hostname of the AIM robot and that it is connected to the same network (AP mode is 192.168.4.1)`);
       }
     }
