@@ -11,16 +11,18 @@ import { initTrain } from './train.js';
 import { initTest } from './test.js';
 import { initRobot } from './robot.js';
 import { initData } from './data.js';
+import { initMazeTab } from './maze_tab.js';
 import { thumbTile } from './collect.js';
 import { events } from '../logs/events.js';
 import * as fs from '../storage/fs.js';
 import { MAX_NAME_LENGTH } from '../storage/project.js';
 
-const TABS = ['collect', 'train', 'test', 'robot', 'data'];
+const TABS = ['collect', 'train', 'test', 'maze', 'robot', 'data'];
 const NO_PROJECT_TEXT = {
   collect: 'Create or open a project to start collecting samples.',
   train: 'Create or open a project, then collect samples to train a model.',
   test: 'Create or open a project to test a model.',
+  maze: 'Create or open a project, train a model, then steer a robot through a maze here.',
   robot: 'Create or open a project, then connect a VEX AIM robot here.',
   data: 'Create or open a project to manage its data.',
 };
@@ -114,7 +116,7 @@ state.robot.on('state', s => {
 
 $('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) setTab(b.dataset.tab); });
 document.addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[1-5]$/.test(e.key)) { e.preventDefault(); setTab(TABS[Number(e.key) - 1]); }
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[1-6]$/.test(e.key)) { e.preventDefault(); setTab(TABS[Number(e.key) - 1]); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveProject(); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') { e.preventDefault(); showProjectDialog(); }
 });
@@ -151,6 +153,7 @@ const shell = {
 tabs.collect = initCollect(state, shell);
 tabs.train = initTrain(state, shell);
 tabs.test = initTest(state, shell);
+tabs.maze = initMazeTab(state, shell);
 tabs.robot = initRobot(state, shell);
 tabs.data = initData(state, shell);
 

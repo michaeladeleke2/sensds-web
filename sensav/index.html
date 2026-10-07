@@ -239,6 +239,19 @@
   .stats-row { display: flex; align-items: center; gap: var(--gap); flex-wrap: wrap; }
   .stats-row .caption:first-child { flex: 1; }
 
+  /* Maze tab: a smaller live view on the left, the maze large on the right */
+  #mazeBody .maze-input { flex: 2; min-width: 280px; max-width: 420px; }
+  #mazeBody .maze-input .stage { flex: none; aspect-ratio: 4 / 3; min-height: 0; }
+  #mazeBody { flex: none; align-items: flex-start; }
+  #mazeBody .maze-col { flex: 5; min-width: 0; }
+  .maze-wrap { position: relative; flex: none; height: clamp(340px, 56vh, 640px); }
+  .maze-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .maze-status { font-size: 15px; font-weight: 700; min-height: 22px; }
+  .maze-row { display: flex; align-items: center; gap: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 6px 8px 6px 14px; }
+  .maze-row.active { border-color: var(--accent); }
+  .maze-row .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .maze-row select { width: 160px; }
+
   /* Robot */
   #robotBody .left { flex: 2; min-width: 360px; }
   #robotBody .right { flex: 3; min-width: 0; }
@@ -305,6 +318,7 @@
     .scroll, .col.scroll { overflow: visible; }
     .stage { flex: none; height: min(62vw, 440px); min-height: 260px; }
     .driving-row .stage { height: 250px; }
+    .maze-wrap { flex: none; height: min(70vw, 420px); }
     .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .empty { flex: none; min-height: 60vh; }
   }
@@ -362,8 +376,9 @@
     <button role="tab" data-tab="collect" aria-selected="true" title="Collect (Ctrl+1)"><span data-icon="collect"></span>Collect</button>
     <button role="tab" data-tab="train" aria-selected="false" title="Train (Ctrl+2)"><span data-icon="train"></span>Train</button>
     <button role="tab" data-tab="test" aria-selected="false" title="Test (Ctrl+3)"><span data-icon="test"></span>Test</button>
-    <button role="tab" data-tab="robot" aria-selected="false" title="Robot (Ctrl+4)"><span data-icon="robot"></span>Robot</button>
-    <button role="tab" data-tab="data" aria-selected="false" title="Data (Ctrl+5)"><span data-icon="data"></span>Data</button>
+    <button role="tab" data-tab="maze" aria-selected="false" title="Maze (Ctrl+4)"><span data-icon="target"></span>Maze</button>
+    <button role="tab" data-tab="robot" aria-selected="false" title="Robot (Ctrl+5)"><span data-icon="robot"></span>Robot</button>
+    <button role="tab" data-tab="data" aria-selected="false" title="Data (Ctrl+6)"><span data-icon="data"></span>Data</button>
   </nav>
 </header>
 
@@ -548,6 +563,46 @@
         <span class="overline">Confidence for each class</span>
         <div class="pred-rows scroll" id="predRows" style="flex:1"></div>
         <span class="caption" id="staleNote" hidden></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Maze ========== -->
+  <section class="tab-page" id="page-maze" hidden>
+    <div class="empty" id="mazeNoModel" hidden>
+      <span class="badge" data-icon="target" data-size="30"></span>
+      <div class="title" id="mazeNoModelTitle">Train a model first</div>
+      <p id="mazeNoModelBody"></p>
+      <button class="btn primary" id="mazeGoTrain"><span data-icon="folder"></span>Go to Train</button>
+    </div>
+    <div class="page-header" id="mazeHeader">
+      <span class="badge" data-icon="target" data-size="22"></span>
+      <div class="titles"><h1>Maze</h1><p id="mazeSubtitle"></p></div>
+      <div class="actions">
+        <button class="btn danger large" id="stopMazeButton" hidden><span data-icon="stop"></span>Stop</button>
+        <button class="btn primary large" id="startMazeButton"><span data-icon="test"></span>Start</button>
+      </div>
+    </div>
+    <div class="body-row" id="mazeBody">
+      <div class="panel maze-input">
+        <div class="panel-head"><span id="mazeInputIcon" data-icon="camera"></span><span class="heading" id="mazeInputTitle">Live camera</span>
+          <div class="trailing"><span class="chip" id="mazeInputChip">Off</span></div>
+        </div>
+        <select class="field device" id="mazeDevice" style="width:100%"></select>
+        <div class="stage"><canvas class="view" id="mazeCam" hidden></canvas><canvas class="view" id="mazeSpec" hidden></canvas><div class="stage-msg" id="mazeMsg"></div></div>
+        <span class="overline">Top prediction</span>
+        <div class="title" id="mazeTop">Nothing yet</div>
+        <span class="caption" id="mazeStats"></span>
+      </div>
+      <div class="panel maze-col" id="mazePanel" style="position:relative">
+        <div class="panel-head"><span data-icon="target"></span><span class="heading">Maze</span><div class="trailing"><span class="chip" id="mazeChip">Maze #1 · 0 moves</span><div class="seg" id="mazeDifficulty"><button data-value="0" aria-pressed="true">Easy 3×4</button><button data-value="1" aria-pressed="false">Medium 4×5</button><button data-value="2" aria-pressed="false">Hard 5×7</button></div><button class="btn small" id="mazeNew"><span data-icon="rotate_right" data-size="16"></span>New maze</button></div></div>
+        <div class="maze-wrap"><canvas id="mazeCanvas"></canvas></div>
+        <div class="maze-status" id="mazeStatus"></div>
+        <div class="divider"></div>
+        <span class="overline">What each class does</span>
+        <div id="mazeActions" style="display:flex;flex-direction:column;gap:8px"></div>
+        <span class="caption">A class moves the robot when it is at least 70% sure for a few predictions in a row. Then the robot waits a moment before the next move.</span>
+        <canvas class="confetti" id="confettiMaze" hidden></canvas>
       </div>
     </div>
   </section>
