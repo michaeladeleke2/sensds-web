@@ -77,3 +77,7 @@ try { start = localStorage.getItem('sensds-tab') || 'visualize'; } catch { /* de
 const hash = location.hash.slice(1);                 // #collect or #visualize opens that tab
 if (TABS[hash]) start = hash;
 selectTab(TABS[start] ? start : 'visualize');
+
+// Offline cache for the robot's WiFi (dist/sw.js, made by the build; the
+// development server has none, so this quietly does nothing there)
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

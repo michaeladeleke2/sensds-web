@@ -505,12 +505,27 @@
     <input id="fileInput" type="file" accept=".npy" hidden>
     <label class="check" id="loopLabel"><input id="loopChk" type="checkbox" checked> Loop recordings</label>
     <hr>
+    <div class="field-label">View</div>
+    <select id="viewSel" title="Doppler spectrogram: speed toward or away from the radar over time.&#10;Range map: how far away things are over time (range_map_live.py).">
+      <option value="doppler" selected>Doppler spectrogram</option>
+      <option value="range">Range map</option>
+    </select>
+    <div class="desc" id="viewDesc"></div>
+    <div id="rangeRecRow" hidden>
+      <div class="param-row"><span class="param-name">Recordings</span></div>
+      <select id="rangeRecSel" title="Play like live: a recording scrolls by at 10 frames per second (range_map_live.py).&#10;Whole recording: one image of the entire file (range_map_v1.py).">
+        <option value="play" selected>Play like live</option>
+        <option value="whole">Whole recording at once</option>
+      </select>
+    </div>
+    <div id="methodRow">
     <div class="field-label">Spectrogram Method</div>
     <select id="methodSel">
       <option value="infineon" selected title="Builds a full Range-Doppler Map per frame, tracks the most energetic range bin (median-smoothed), and emits that Doppler slice.&#10;512 Doppler bins x 1 column per frame. No MTI; range tracking rejects clutter instead.&#10;Retrain before using a model with this representation.">Infineon SDK</option>
       <option value="stft" disabled>STFT (original), not in the web version yet</option>
     </select>
     <div class="desc" id="methodDesc">512 bins x 1 col/frame  ·  range tracked  ·  retrain models</div>
+    </div>
     <hr>
     <div class="field-label">Display Axes</div>
     <div class="param-row"><span class="param-name">Time window (X)</span><span class="param-value" id="timeValue">5 s</span></div>

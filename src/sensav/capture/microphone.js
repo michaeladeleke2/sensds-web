@@ -19,6 +19,22 @@ const SILENCE_CHECK_MS = 2000;
 const LEVEL_INTERVAL_MS = 50;
 const STALE_AUDIO_MS = 500;
 
+// The audio worklet that copies the microphone's samples (first channel) to
+// the page in 128-sample blocks. Kept in this file and loaded from a blob, so
+// starting the microphone needs no download (the robot's WiFi has no internet).
+const WORKLET_SOURCE = `
+class MicTap extends AudioWorkletProcessor {
+  process(inputs) {
+    const ch = inputs[0] && inputs[0][0];
+    if (ch) this.port.postMessage(ch.slice(0));
+    return true;
+  }
+}
+registerProcessor('sensav-mic-tap', MicTap);
+`;
+let workletUrl = null;
+const workletModule = () => (workletUrl ??= URL.createObjectURL(new Blob([WORKLET_SOURCE], { type: 'text/javascript' })));
+
 export async function listMicrophones() {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -60,7 +76,7 @@ export class MicrophoneController extends Emitter {
       let ctx;
       try { ctx = new AudioContext({ sampleRate: SAMPLE_RATE }); } catch { ctx = new AudioContext(); }
       this.ctx = ctx;
-      await ctx.audioWorklet.addModule(new URL('./mic_worklet.js', import.meta.url));
+      await ctx.audioWorklet.addModule(workletModule());
       if (run !== this.run) { this.teardown(); return; }
       const source = ctx.createMediaStreamSource(stream);
       const tap = new AudioWorkletNode(ctx, 'sensav-mic-tap', { numberOfInputs: 1, numberOfOutputs: 0 });

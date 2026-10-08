@@ -1,0 +1,98 @@
+{
+ "shape": [
+  20,
+  3,
+  128,
+  256
+ ],
+ "versions": {
+  "numpy": "2.4.3",
+  "matplotlib": "3.10.8"
+ },
+ "live_raw_clim": [
+  -20.0,
+  16.4312456850347
+ ],
+ "map_raw_clim": [
+  -20.0,
+  16.505986308048193
+ ],
+ "live_raw_range": [
+  0.0,
+  3.481680591772727
+ ],
+ "live_mti_clim": [
+  -63.435862766656314,
+  -23.435862766656314
+ ],
+ "map_mti_clim": [
+  -63.435862766656314,
+  -23.435862766656314
+ ],
+ "live_mti_range": [
+  0.0,
+  3.481680591772727
+ ],
+ "arrays": {
+  "range_window": {
+   "shape": [
+    256
+   ],
+   "offset": 0
+  },
+  "doppler_window": {
+   "shape": [
+    128
+   ],
+   "offset": 2048
+  },
+  "map_raw": {
+   "shape": [
+    20,
+    512
+   ],
+   "offset": 3072
+  },
+  "range_m": {
+   "shape": [
+    512
+   ],
+   "offset": 269312
+  },
+  "live_raw_history_7": {
+   "shape": [
+    12,
+    512
+   ],
+   "offset": 89088
+  },
+  "live_raw_history_20": {
+   "shape": [
+    12,
+    512
+   ],
+   "offset": 138240
+  },
+  "map_mti": {
+   "shape": [
+    20,
+    512
+   ],
+   "offset": 187392
+  },
+  "live_mti_history_7": {
+   "shape": [
+    12,
+    512
+   ],
+   "offset": 273408
+  },
+  "live_mti_history_20": {
+   "shape": [
+    12,
+    512
+   ],
+   "offset": 322560
+  }
+ }
+}

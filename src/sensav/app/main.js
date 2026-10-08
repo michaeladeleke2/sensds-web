@@ -349,3 +349,7 @@ addEventListener('pagehide', () => {
 });
 
 start();
+
+// Offline cache for the robot's WiFi (dist/sw.js, made by the build; the
+// development server has none, so this quietly does nothing there)
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('../sw.js', { scope: '../' }).catch(() => {});

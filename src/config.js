@@ -60,3 +60,19 @@ export function deriveAcquisition(cfg = SENSDS_CONFIG) {
     frameBytes: numSamples * 3 / 2,
   };
 }
+
+// Range map view on the Visualize tab (range_map_v1.py / range_map_live.py).
+// mode 'raw': mean range-FFT magnitude, stationary reflections stay (default).
+// mode 'mti': moving targets only (Doppler power without the zero-velocity bin).
+// Change it here, or for one visit add ?range_mode=mti to the page address.
+export const RANGE_MAP = Object.freeze({
+  mode: 'raw',
+});
+
+export function rangeMapMode() {
+  try {
+    const m = new URLSearchParams(location.search).get('range_mode');
+    if (m === 'mti' || m === 'raw') return m;
+  } catch { /* not in a page */ }
+  return RANGE_MAP.mode;
+}

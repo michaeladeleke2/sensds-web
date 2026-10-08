@@ -47,6 +47,7 @@ Chrome or Edge on Mac, Windows, Linux, Chromebook. Not Safari, Firefox, iPhone, 
 | Curve Fit tab: freeze, trace, fit 1 to 4 sinusoids (team feedback applied) | Headless only (2026-10-06): traced sine fitted in Chrome; math matches desktop and scipy; live radar not yet run | Not yet run |
 | VEX AIM tab: connect, Single Command, RoboSoccer | Not yet run with a robot. Commands match the desktop byte for byte against a simulated robot; https site reaches a LAN ws:// server once local network access is allowed | Not yet run |
 | Badges: XP, levels, badges, toast, badge list | Headless only (2026-10-06); rules match the desktop | Not yet run |
+| Visualize: Range map view (live and whole recording, MTI in `src/config.js`) | Headless only (2026-10-08): recording played and drawn whole; numbers match the scripts to 1e-12 dB; live radar not yet run | Not yet run |
 | SensAV page (`sensav/`): Collect, Train, Test, Robot, Data with a real camera and microphone | Headless only (2026-10-07, Chrome fake camera and microphone): full image and audio flows, simulated robot; projects open in both directions with the desktop code (see `docs/procedures/sensav.md`) | Not yet run |
 | SensAV with a real VEX AIM robot | Not yet run | Not yet run |
 

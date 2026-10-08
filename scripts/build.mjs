@@ -73,5 +73,13 @@ for (const f of [...files].sort()) {
   writeFileSync(join(out, f), isText ? versioned(f, readFileSync(join(root, f), 'utf8')) : readFileSync(join(root, f)));
   console.log('  ' + relative(root, join(out, f)));
 }
+// Offline cache (service worker): every published file, scripts under the
+// version-tagged URL the pages request, plus the TensorFlow.js CDN modules
+const tagged = [...files].sort().map(f => (f.endsWith('.js') ? tag(f) : f === 'index.html' ? './' : f.endsWith('/index.html') ? f.slice(0, -'index.html'.length) : f));
+const cdn = [...new Set([...files].filter(f => f.endsWith('.js')).flatMap(f => [...readFileSync(join(root, f), 'utf8').matchAll(/['"](https:\/\/cdn\.jsdelivr\.net\/[^'"]+)['"]/g)].map(m => m[1])))];
+const sw = readFileSync(join(root, 'scripts', 'sw_template.js'), 'utf8')
+  .replace('__VERSION__', version).replace('__FILES__', JSON.stringify(tagged)).replace('__CDN__', JSON.stringify(cdn));
+writeFileSync(join(out, 'sw.js'), sw);
+console.log(`  dist/sw.js (offline cache of ${tagged.length} files and ${cdn.length} CDN modules)`);
 console.log(`version tag: ?v=${version}`);
 console.log(`dist/ ready: ${files.size} files, including ${strata.length} Strata-derived (publishing permitted, see LICENSING.md).`);
