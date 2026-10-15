@@ -9,14 +9,20 @@ Before you start:
 - Connect the radar.
 
 1. **Load Model**: pick the trained model folder (models/<name>_vN), as in the Test tab.
+   **Class Actions** then lists every class of the model with what the robot does for it:
+   Nothing, Turn left or right 30°, Move forward or backward (300 mm), Slide left or right,
+   Kick (hard, medium or soft), or Stop. Each class starts as the desktop has it (swipe_left
+   and swipe_right turn, push kicks hard, idle and any other class do nothing). Choices are
+   remembered in this browser for that model.
 2. Join the robot's WiFi (a network named VEX-AIM-…) in your computer's WiFi settings.
 3. Type the robot's IP address (192.168.4.1 in its own WiFi mode) and press **Connect**.
    Chrome asks to let the site look for and connect to devices on your local network: choose
    **Allow**. The status turns green when the robot answers.
 4. Pick a mode:
    - **Single Command**: press Start, do a gesture within the capture time; the robot acts once.
-   - **RoboSoccer**: the robot rolls forward on its own. Swipe left or right to turn 30 degrees,
-     push to kick, idle to keep going. After a command the gesture bar shows a 3 s wait.
+   - **RoboSoccer**: the robot rolls forward on its own; each recognized class does its Class
+     Action (by default: swipe left or right to turn 30 degrees, push to kick, idle to keep
+     going). After a command the gesture bar shows a 3 s wait.
 5. **Confidence Threshold**: the robot only acts when the model is at least this sure.
 6. **Stop** stops the robot. Leaving the tab also stops it. If the robot powers off, the tab
    notices after five failed drive commands and stops safely.

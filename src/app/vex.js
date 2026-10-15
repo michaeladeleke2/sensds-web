@@ -4,8 +4,10 @@
 //   RoboSoccer      the robot rolls forward (move_for 500 mm every 0.4 s);
 //                   every 20th tick the last frames are classified; a command
 //                   above the threshold fires, then a 3 s pause,
-//   swipe_left / swipe_right turn 30 degrees, push kicks hard, idle sends
-//   nothing. Five failed drive commands in a row mean the robot is gone.
+//   each class does what Class Actions says. The defaults are the desktop's:
+//   swipe_left / swipe_right turn 30 degrees, push kicks hard, idle and any
+//   other class send nothing. Five failed drive commands in a row mean the
+//   robot is gone.
 // The prediction cache, minimum gap between inferences, messages and log are
 // the desktop's. Inference uses the Test tab's worker (a separate copy).
 //
@@ -33,10 +35,30 @@ const HINTS = [
   'Load your model before switching to the robot\'s WiFi: the robot network has no internet, and the model needs it once to start.',
   'Single Command: perform a gesture during the capture window and the robot executes that action once.',
   'RoboSoccer: the robot drives forward continuously. Swipe left/right to steer, push to kick, idle to cruise.',
+  'Class Actions: after loading a model, choose what the robot does for each of your classes.',
   'Confidence threshold: the robot only reacts when the model is at least this sure. Raise it to cut false moves; lower it if the robot ignores you.',
   "If the robot powers off mid-session the app detects it automatically and stops safely. Just reconnect when it's back on.",
   'Getting wrong commands? Go to Collect, add more samples for that gesture, then retrain your model.',
 ];
+
+// What a class can make the robot do (the AIM commands aim_client.js sends)
+export const VEX_ACTIONS = [
+  ['none', 'Nothing'],
+  ['turn_left', 'Turn left 30°'],
+  ['turn_right', 'Turn right 30°'],
+  ['forward', 'Move forward'],
+  ['backward', 'Move backward'],
+  ['strafe_left', 'Slide left'],
+  ['strafe_right', 'Slide right'],
+  ['kick_hard', 'Kick (hard)'],
+  ['kick_medium', 'Kick (medium)'],
+  ['kick_soft', 'Kick (soft)'],
+  ['stop', 'Stop'],
+];
+const MOVE_MM = 300;
+// The desktop's fixed gesture commands, used as each class's starting choice
+const DEFAULT_ACTIONS = { swipe_left: 'turn_left', swipe_right: 'turn_right', push: 'kick_hard', idle: 'none' };
+export const defaultAction = cls => DEFAULT_ACTIONS[cls] ?? 'none';
 
 const $ = id => document.getElementById(id);
 const pane = $('vexPane');
@@ -48,7 +70,9 @@ const st = {
   inferenceRunning: false, cooldownUntil: 0, cacheProbs: {}, cacheRemaining: 0, lastInferDone: 0,
   driving: false, barTimer: null,
   proc: null, plot: null, count: 0, dirty: false, live: null,
+  classes: [], actions: {},
 };
+const actionsKey = () => `sensds-vex-actions:${st.modelName}`;
 const minInferGapMs = () => (st.backend === 'webgpu' || st.backend === 'webgl' ? 300 : 1500);   // min_infer_gap_s
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -172,8 +196,34 @@ async function loadModel() {
   } catch (e) { onModelLoadError(e.message); }
 }
 function setModelLabel(text, state) { const el = $('vexModelLbl'); el.textContent = text; el.className = `model-lbl ${state}`; }
+function renderActions() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(actionsKey()) || '{}'); } catch { /* none saved */ }
+  st.actions = Object.fromEntries(st.classes.map(c => [c, VEX_ACTIONS.some(([k]) => k === saved[c]) ? saved[c] : defaultAction(c)]));
+  const host = $('vexActions');
+  host.innerHTML = '';
+  for (const c of st.classes) {
+    const row = document.createElement('div');
+    row.className = 'vex-action-row'; row.dataset.cls = c;
+    const name = document.createElement('span'); name.textContent = c.replace(/_/g, ' '); name.title = c;
+    const sel = document.createElement('select');
+    for (const [k, label] of VEX_ACTIONS) sel.add(new Option(label, k));
+    sel.value = st.actions[c];
+    sel.onchange = () => {
+      st.actions[c] = sel.value;
+      try { localStorage.setItem(actionsKey(), JSON.stringify(st.actions)); } catch { /* this visit only */ }
+      log(`${c} now does: ${VEX_ACTIONS.find(([k]) => k === sel.value)[1]}`);
+    };
+    row.append(name, sel);
+    host.append(row);
+  }
+  $('vexActionsBox').hidden = !st.classes.length;
+}
+
 function onModelLoaded({ classes, backend }) {
   st.modelReady = true; st.backend = backend;
+  st.classes = classes;
+  renderActions();
   setModelLabel(`✓  ${st.modelName}`, 'ok');
   $('vexLoadBtn').disabled = false;
   log(`✓ Model loaded: ${st.modelName}  (${classes.length} classes: ${classes.join(', ')})`);
@@ -275,12 +325,22 @@ function runInference(frames, mode) {
   st.worker.postMessage({ type: 'predict', id: ++st.reqId, frames, nChirp: N_CHIRP, nSample: N_SAMPLE, jetVmin: currentJetVmin() });
 }
 
-// _apply_gesture
-async function applyGesture(gesture) {
-  if (gesture === 'swipe_left') { await st.robot.turnFor(TurnType.LEFT, 30); return 'turn left'; }
-  if (gesture === 'swipe_right') { await st.robot.turnFor(TurnType.RIGHT, 30); return 'turn right'; }
-  if (gesture === 'push') { await st.robot.kick(KickType.HARD); return 'kick / surge'; }
-  return 'idle (no command)';
+// _apply_gesture, with the class's chosen action
+async function applyAction(action) {
+  const r = st.robot;
+  switch (action) {
+    case 'turn_left': await r.turnFor(TurnType.LEFT, 30); return 'turn left';
+    case 'turn_right': await r.turnFor(TurnType.RIGHT, 30); return 'turn right';
+    case 'forward': await r.moveFor(MOVE_MM, 0); return 'move forward';
+    case 'backward': await r.moveFor(MOVE_MM, 180); return 'move backward';
+    case 'strafe_left': await r.moveFor(MOVE_MM, -90); return 'slide left';
+    case 'strafe_right': await r.moveFor(MOVE_MM, 90); return 'slide right';
+    case 'kick_hard': await r.kick(KickType.HARD); return 'kick / surge';
+    case 'kick_medium': await r.kick(KickType.MEDIUM); return 'kick (medium)';
+    case 'kick_soft': await r.kick(KickType.SOFT); return 'kick (soft)';
+    case 'stop': await r.stopAllMovement(); return 'stop';
+    default: return 'idle (no command)';
+  }
 }
 
 async function onInferenceResult(probs, mode, fromCache = false) {
@@ -294,6 +354,7 @@ async function onInferenceResult(probs, mode, fromCache = false) {
     else if (mode === 'robosoccer') st.cacheRemaining = 0;
   }
   $('vexPredGesture').textContent = best.replace(/_/g, ' ');
+  for (const row of $('vexActions').children) row.classList.toggle('active', row.dataset.cls === best);
   $('vexPredConf').textContent = `Confidence: ${pct(conf)}`;
 
   let cmd = 'none';
@@ -301,8 +362,9 @@ async function onInferenceResult(probs, mode, fromCache = false) {
     try {
       // Hold off the next RoboSoccer inference for 3 s so the robot has time
       // to act before the next classification
-      if (best !== 'idle') { st.cooldownUntil = Date.now() + COOLDOWN_MS; st.cacheProbs = {}; st.cacheRemaining = 0; }
-      cmd = await applyGesture(best);
+      const action = st.actions[best] ?? defaultAction(best);
+      if (action !== 'none') { st.cooldownUntil = Date.now() + COOLDOWN_MS; st.cacheProbs = {}; st.cacheRemaining = 0; }
+      cmd = await applyAction(action);
     } catch (e) { cmd = 'error'; log(`Command error: ${e.message}`); }
   } else if (conf < threshold) cmd = `skipped (${pct(conf)} < ${pct(threshold)} threshold)`;
   $('vexPredCmd').textContent = `Command: ${cmd}`;
@@ -335,3 +397,5 @@ export function initVex() {
 // Leaving the tab stops a running session (VexAimTab.stop_if_running)
 export function hideVex() { if (st.driving || st.capturing) onStop(); }
 export function showVex() { requestAnimationFrame(() => { if (st.live) st.plot.draw(st.live.history, st.count, st.live.dopplerBins); else st.plot.drawEmpty(); }); }
+// For automated checks: pretend a model loaded / a prediction arrived
+export const vexTestHooks = { modelLoaded: onModelLoaded, prediction: (probs, mode = 'single') => onInferenceResult(probs, mode) };

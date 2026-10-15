@@ -430,6 +430,11 @@
   .vex-disconnect-btn:hover:not(:disabled) { background: #c0392b; filter: brightness(1.1); }
   .vex-connect-btn:disabled, .vex-disconnect-btn:disabled { background: var(--progress-bg); color: var(--faint); }
   .vex-robot-status { font-size: 12px; color: var(--faint); }
+  .vex-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+  .vex-action-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 8px; align-items: center; }
+  .vex-action-row span { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: capitalize; }
+  .vex-action-row select { max-height: none; }
+  .vex-action-row.active span { color: var(--accent); }
   .vex-robot-status.busy { color: #e67e22; } .vex-robot-status.ok { color: var(--ok); } .vex-robot-status.bad { color: var(--bad); }
   .model-lbl.busy { color: #e67e22; }
   .vex-stop-btn { background: #c0392b; color: #fff; }
@@ -916,6 +921,11 @@ Both are reduced to 2D with PCA. The one whose classes form tighter, more separa
     <hr>
     <button id="vexLoadBtn" class="load-model-btn" title="Pick a trained model folder (models/&lt;name&gt;_vN in your data folder).">📂  Load Model</button>
     <div id="vexModelLbl" class="model-lbl">No model loaded.</div>
+    <div id="vexActionsBox" hidden>
+      <div class="field-label">Class Actions</div>
+      <div class="desc">What the robot does when the model recognizes each class.</div>
+      <div id="vexActions" class="vex-actions"></div>
+    </div>
     <hr>
     <div class="field-label">Mode</div>
     <label class="check"><input type="radio" name="vexMode" id="vexModeSingle" checked> Single Command</label>
