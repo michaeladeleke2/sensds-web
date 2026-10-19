@@ -24,7 +24,7 @@ const PT = {
 const DASH = [3.7, 1.6];                         // lines.dashed_pattern, scaled by linewidth
 
 export class LiveSpectrogramPlot {
-  constructor(canvas, { historyLength, maxSpeed = 6.19405905, jetVmin = -20.0, title = 'Doppler Spectrogram (live)' }) {
+  constructor(canvas, { historyLength, maxSpeed = 4.112380411522634, jetVmin = -20.0, title = 'Doppler Spectrogram (live)' }) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     Object.assign(this, { historyLength, maxSpeed, jetVmin, title });

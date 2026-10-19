@@ -2,7 +2,7 @@
 // core/reference_image.py holds one app-wide Reduce noise setting: it changes
 // the live view, the saved training images and what the model is shown.
 
-export const REF_JET_VMIN = -20.0;
+export const REF_JET_VMIN = -50.0;
 export const REDUCED_NOISE_JET_VMIN = -50.0;
 
 const listeners = new Set();

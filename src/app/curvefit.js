@@ -26,7 +26,7 @@ import { fitCurve, snapToPeak, MODEL_SINUSOID, MODEL_DAMPED } from '../curvefit/
 const FPS = 10;
 const REDRAW_MS = 200;
 const REBUILD_MS = 300;
-const MAX_SPEED = 6.19405905;          // the reference script's velocity axis
+const MAX_SPEED = 4.112380411522634;          // the reference script's velocity axis
 const VIEW_VEL = 3;                    // shown velocity range, +/- m/s (team feedback)
 const TRACE_COLOR = '#ff00ff';
 const MIN_TRACE_POINTS = 10;

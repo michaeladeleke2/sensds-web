@@ -11,7 +11,8 @@
 // colour bar labelled "dB", vmin/vmax from _jet_clim. Sizes in points at
 // 100 dpi times the device pixel ratio, as the Qt backend uses.
 
-import { makeImage, jetClim } from './image.js';
+import { makeImage } from './image.js';
+import { rangeJetClim } from '../dsp/range_map.js';
 import { axisTicks, yTickSpace, xTickSpace } from './ticks.js';
 import { JET_LUT_BYTES, lutIndex } from './jet.js';
 
@@ -70,7 +71,7 @@ export class RangeMapPlot {
     const total = rows.length / nBins, first = total - nFilled;
     const plot = new Float64Array(nBins * nFilled);
     for (let t = 0; t < nFilled; t++) for (let b = 0; b < nBins; b++) plot[(nBins - 1 - b) * nFilled + t] = rows[(first + t) * nBins + b];
-    const { vmin, vmax } = jetClim(plot, this.jetVmin);
+    const { vmin, vmax } = rangeJetClim(plot, this.jetVmin);
     const img = makeImage(plot, nBins, nFilled, ax.w, ax.h, vmin, vmax);
     ctx.putImageData(new ImageData(img.rgba, img.outW, img.outH), Math.round(ax.x), Math.round(ax.y + ax.h - img.outH));
 

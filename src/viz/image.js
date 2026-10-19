@@ -10,12 +10,20 @@
 
 import { JET_LUT, JET_LUT_BYTES, lutIndex } from './jet.js';
 
-// _jet_clim
+// _jet_clim: the floor is fixed at jetVmin; the top is the loudest cell, or
+// -10 dB when that is at or below the floor.
+// Previous version:
+// export function jetClim(data, jetVmin) {
+//   let vmax = -Infinity;
+//   for (let i = 0; i < data.length; i++) if (data[i] > vmax) vmax = data[i];   // nanmax (no NaNs here)
+//   const vmin = jetVmin < vmax ? jetVmin : vmax - 40.0;
+//   return { vmin, vmax };
+// }
 export function jetClim(data, jetVmin) {
   let vmax = -Infinity;
-  for (let i = 0; i < data.length; i++) if (data[i] > vmax) vmax = data[i];   // nanmax (no NaNs here)
-  const vmin = jetVmin < vmax ? jetVmin : vmax - 40.0;
-  return { vmin, vmax };
+  for (let i = 0; i < data.length; i++) if (data[i] > vmax) vmax = data[i];
+  if (!Number.isFinite(vmax) || vmax <= jetVmin) vmax = -10.0;
+  return { vmin: jetVmin, vmax };
 }
 
 function normalise(v, vmin, vmax) {

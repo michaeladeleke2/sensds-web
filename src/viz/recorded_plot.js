@@ -6,7 +6,7 @@
 import { makeImage, jetClim } from './image.js';
 import { axisTicks, yTickSpace } from './ticks.js';
 
-const DASH = [3.7, 1.6], GRID_PT = 0.7, MAX_SPEED = 6.19405905;
+const DASH = [3.7, 1.6], GRID_PT = 0.7, MAX_SPEED = 4.112380411522634;
 
 export class RecordedSpectrogramPlot {
   constructor(canvas) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.last = null; }

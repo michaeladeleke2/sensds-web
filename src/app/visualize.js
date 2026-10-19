@@ -22,7 +22,7 @@ import { currentJetVmin, getReduceNoise, setReduceNoise, onReduceNoiseChange } f
 const FPS = 10;                       // frame_repetition_time_s = 0.1
 const REDRAW_MS = 200;                // ReferenceSpectrogramView._REDRAW_MS
 const REBUILD_MS = 300;               // VisualizeTab._ref_rebuild interval
-const REF_MAX_SPEED_M_S = 6.19405905;
+const REF_MAX_SPEED_M_S = 4.112380411522634;
 const REF_ANTENNA = 0;
 
 const $ = id => document.getElementById(id);

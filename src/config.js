@@ -5,19 +5,22 @@
 export const SENSDS_CONFIG = Object.freeze({
   // Sequence (cfg_simo_seq.json)
   frame_repetition_time_s: 0.10,
-  chirp_repetition_time_s: 0.0002,
+  // chirp_repetition_time_s: 0.0002,
+  chirp_repetition_time_s: 0.0003,
   num_chirps: 128,
   tdm_mimo: false,
   // Chirp (cfg_simo_chirp.json)
   start_frequency_Hz: 58.0e9,
   end_frequency_Hz: 63.5e9,
-  sample_rate_Hz: 2e6,
+  // sample_rate_Hz: 2e6,
+  sample_rate_Hz: 1e6,
   num_samples: 256,
   rx_mask: 7,
   tx_mask: 1,
   tx_power_level: 31,
   lp_cutoff_Hz: 500000,
-  hp_cutoff_Hz: 80000,
+  // hp_cutoff_Hz: 80000,
+  hp_cutoff_Hz: 20000,
   if_gain_dB: 33,
 });
 

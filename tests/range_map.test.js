@@ -4,8 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseNpy, framesFromNpy } from '../src/io/npy.js';
-import { windows, computeRangeMap, LiveRangeProcessor } from '../src/dsp/range_map.js';
-import { jetClim } from '../src/viz/image.js';
+import { windows, computeRangeMap, LiveRangeProcessor, rangeJetClim } from '../src/dsp/range_map.js';
 
 const FIX = new URL('./fixtures/range_map/', import.meta.url);
 const meta = JSON.parse(readFileSync(new URL('meta.json', FIX)));
@@ -28,7 +27,7 @@ for (const mode of ['raw', 'mti']) {
     console.log(`${mode}: max |diff| ${d} dB`);
     assert.ok(d < 1e-9);
     assert.ok(maxDiff(rangeM, arr('range_m')) < 1e-15);
-    const { vmin, vmax } = jetClim(map, -20);
+    const { vmin, vmax } = rangeJetClim(map, -20);
     assert.ok(Math.abs(vmin - meta[`map_${mode}_clim`][0]) < 1e-9 && Math.abs(vmax - meta[`map_${mode}_clim`][1]) < 1e-9);
   });
 

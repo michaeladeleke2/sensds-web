@@ -81,12 +81,26 @@ export class RdmComputer {
   }
 }
 
-// select_range_bin_raw: argmax over range of the dB sum over Doppler (first max wins).
-export function selectRangeBinRaw(rdmDb, nRangeBins, dopplerFftSize) {
-  let best = -Infinity, bestIdx = 0;
-  for (let r = 0; r < nRangeBins; r++) {
-    const s = pairwiseSum(rdmDb, r * dopplerFftSize, dopplerFftSize);
-    if (s > best) { best = s; bestIdx = r; }
+// select_range_bin_raw: the range bin, from MIN_RANGE_BIN (10 cm) on, whose
+// loudest Doppler cell is the loudest (first max wins).
+// Previous version (argmax over range of the dB sum over Doppler):
+// export function selectRangeBinRaw(rdmDb, nRangeBins, dopplerFftSize) {
+//   let best = -Infinity, bestIdx = 0;
+//   for (let r = 0; r < nRangeBins; r++) {
+//     const s = pairwiseSum(rdmDb, r * dopplerFftSize, dopplerFftSize);
+//     if (s > best) { best = s; bestIdx = r; }
+//   }
+//   return bestIdx;
+// }
+export const MIN_RANGE_BIN = 15;
+export function selectRangeBinRaw(rdmDb, nRangeBins, dopplerFftSize, minBin = MIN_RANGE_BIN) {
+  const start = Math.min(nRangeBins - 1, Math.max(0, minBin));
+  let best = -Infinity, bestIdx = start;
+  for (let r = start; r < nRangeBins; r++) {
+    let peak = -Infinity;
+    const row = r * dopplerFftSize;
+    for (let k = 0; k < dopplerFftSize; k++) if (rdmDb[row + k] > peak) peak = rdmDb[row + k];
+    if (peak > best) { best = peak; bestIdx = r; }
   }
   return bestIdx;
 }

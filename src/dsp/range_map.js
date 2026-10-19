@@ -113,6 +113,14 @@ export function computeRangeMap(frameAt, nFrame, nChirp, nSample, mode = 'mti') 
   return { map, nBins, rangeM: rangeAxisM(nBins, rangeFftSize, { nSample }) };
 }
 
+// _jet_clim of range_map_v1.py (its own copy, separate from the Doppler view's)
+export function rangeJetClim(data, jetVmin) {
+  let vmax = -Infinity;
+  for (let i = 0; i < data.length; i++) if (data[i] > vmax) vmax = data[i];   // nanmax (no NaNs here)
+  const vmin = jetVmin < vmax ? jetVmin : vmax - 40.0;
+  return { vmin, vmax };
+}
+
 // LiveRangeProcessor (range_map_live.py): rolling history, newest row last
 export class LiveRangeProcessor {
   constructor({ nSample, nChirp, mode = 'mti', historyLength = 100 }) {
