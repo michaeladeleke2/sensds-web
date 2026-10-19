@@ -9,21 +9,21 @@
     "version_build": "0",
     "extended_version": "2.9.0"
   },
-  "date": "2026-10-05",
+  "date": "2026-10-19",
   "config": {
     "frame_repetition_time_s": 0.1,
-    "chirp_repetition_time_s": 0.0002,
+    "chirp_repetition_time_s": 0.0003,
     "num_chirps": 128,
     "tdm_mimo": false,
     "start_frequency_Hz": 58000000000.0,
     "end_frequency_Hz": 63500000000.0,
-    "sample_rate_Hz": 2000000.0,
+    "sample_rate_Hz": 1000000.0,
     "num_samples": 256,
     "rx_mask": 7,
     "tx_mask": 1,
     "tx_power_level": 31,
     "lp_cutoff_Hz": 500000,
-    "hp_cutoff_Hz": 80000,
+    "hp_cutoff_Hz": 20000,
     "if_gain_dB": 33
   },
   "frames": {
@@ -36,14 +36,14 @@
       256
     ],
     "mean_per_antenna": [
-      -0.20564548671245575,
-      -0.008651403710246086,
-      0.016724739223718643
+      -0.5337866544723511,
+      -0.017964163795113564,
+      0.02942758798599243
     ],
     "std_per_antenna": [
-      0.14792393147945404,
-      0.11980128288269043,
-      0.04095602035522461
+      0.3327958285808563,
+      0.3126768171787262,
+      0.11003010720014572
     ]
   }
 }
