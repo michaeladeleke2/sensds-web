@@ -10,6 +10,8 @@
 // origin='lower'), dashed white range grid at the y ticks above the image,
 // colour bar labelled "dB", vmin/vmax from _jet_clim. Sizes in points at
 // 100 dpi times the device pixel ratio, as the Qt backend uses.
+// Team feedback: the distance shown is configurable ({ min, max } in metres);
+// only the bins inside it are drawn, and the colour scale is taken over them.
 
 import { makeImage } from './image.js';
 import { rangeJetClim } from '../dsp/range_map.js';
@@ -25,12 +27,22 @@ function snap(v, width) {
   return w % 2 ? Math.floor(v) + 0.5 : Math.round(v);
 }
 
+// The bins whose centres lie inside distance { min, max } (all of them without one)
+export function shownBins(rangeM, distance) {
+  let lo = 0, hi = rangeM.length - 1;
+  if (distance) {
+    while (lo < hi && rangeM[lo] < distance.min - 1e-9) lo++;
+    while (hi > lo && rangeM[hi] > distance.max + 1e-9) hi--;
+  }
+  return { lo, hi };
+}
+
 export class RangeMapPlot {
   // layout: 'live' or 'recording'
-  constructor(canvas, { layout = 'live', jetVmin = -20.0, title = 'Range map (live)', frameRepetitionTimeS = 0.1 }) {
+  constructor(canvas, { layout = 'live', jetVmin = -20.0, title = 'Range map (live)', frameRepetitionTimeS = 0.1, distance = null }) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    Object.assign(this, { layout, jetVmin, title, frameRepetitionTimeS });
+    Object.assign(this, { layout, jetVmin, title, frameRepetitionTimeS, distance });
     this.last = null;
   }
 
@@ -68,15 +80,16 @@ export class RangeMapPlot {
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
 
     // plot_data = history[-n_filled:].T, origin='lower': nearest range at the bottom
+    const { lo, hi } = shownBins(rangeM, this.distance), nShown = hi - lo + 1;
     const total = rows.length / nBins, first = total - nFilled;
-    const plot = new Float64Array(nBins * nFilled);
-    for (let t = 0; t < nFilled; t++) for (let b = 0; b < nBins; b++) plot[(nBins - 1 - b) * nFilled + t] = rows[(first + t) * nBins + b];
+    const plot = new Float64Array(nShown * nFilled);
+    for (let t = 0; t < nFilled; t++) for (let b = lo; b <= hi; b++) plot[(hi - b) * nFilled + t] = rows[(first + t) * nBins + b];
     const { vmin, vmax } = rangeJetClim(plot, this.jetVmin);
-    const img = makeImage(plot, nBins, nFilled, ax.w, ax.h, vmin, vmax);
+    const img = makeImage(plot, nShown, nFilled, ax.w, ax.h, vmin, vmax);
     ctx.putImageData(new ImageData(img.rgba, img.outW, img.outH), Math.round(ax.x), Math.round(ax.y + ax.h - img.outH));
 
     const dr = rangeM.length > 1 ? rangeM[1] - rangeM[0] : 0;
-    const near = rangeM[0] - 0.5 * dr, far = rangeM[rangeM.length - 1] + 0.5 * dr;
+    const near = rangeM[lo] - 0.5 * dr, far = rangeM[hi] + 0.5 * dr;
     let x0, x1;
     if (this.layout === 'live') { x1 = frameEnd * this.frameRepetitionTimeS; x0 = (frameEnd - nFilled) * this.frameRepetitionTimeS; }
     else { x0 = 0; x1 = durationS; }
@@ -183,6 +196,8 @@ export class RangeMapPlot {
     ctx.fillText('dB', 0, 0);
     ctx.restore();
   }
+
+  setDistance(distance) { this.distance = distance; this.redraw(); }
 
   redraw() { if (this.last) this.draw(this.last); else this.drawEmpty(); }
 }

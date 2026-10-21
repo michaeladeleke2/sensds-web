@@ -67,7 +67,9 @@ export function deriveAcquisition(cfg = SENSDS_CONFIG) {
 // Range map view on the Visualize tab (range_map_v1.py / range_map_live.py).
 // mode 'raw': mean range-FFT magnitude, stationary reflections stay (default).
 // mode 'mti': moving targets only (Doppler power without the zero-velocity bin).
-// Change it here, or for one visit add ?range_mode=mti to the page address.
+// This is the starting value of the MTI filter checkbox (Visualize and Curve
+// Fit); a choice made there is remembered by the browser and wins over it.
+// ?range_mode=mti (or raw) in the page address wins over both.
 export const RANGE_MAP = Object.freeze({
   mode: 'raw',
 });

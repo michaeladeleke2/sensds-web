@@ -43,3 +43,12 @@ for (const mode of ['raw', 'mti']) {
     assert.deepEqual([p.rangeM[0], p.rangeM.at(-1)], meta[`live_${mode}_range`]);
   });
 }
+
+test('shownBins: only the bins inside the distance shown', async () => {
+  const { shownBins } = await import('../src/viz/range_plot.js');
+  const { rangeAxisM } = await import('../src/dsp/range_map.js');
+  const r = rangeAxisM(512, 1024, { nSample: 256 });
+  assert.deepEqual(shownBins(r, null), { lo: 0, hi: 511 });
+  const { lo, hi } = shownBins(r, { min: 0.5, max: 2 });
+  assert.ok(r[lo] >= 0.5 && r[lo - 1] < 0.5 && r[hi] <= 2 && r[hi + 1] > 2);
+});

@@ -403,12 +403,40 @@
   .cf-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 20px; }
   .cf-plot-wrap { flex: 3; min-height: 240px; position: relative; border-radius: var(--radius); box-shadow: var(--shadow); background: var(--panel); overflow: hidden; }
   .cf-plot-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  .cf-fit-row { flex: 2; min-height: 200px; display: flex; gap: 12px; }
-  .cf-fit-wrap { flex: 3; min-width: 0; position: relative; border-radius: var(--radius); box-shadow: var(--shadow); background: var(--panel); overflow: hidden; }
+  .cf-fit-row { flex: 3; min-height: 300px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 14px; }
+  .cf-fit-col { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+  .cf-fit-wrap { flex: 1; min-height: 200px; position: relative; border-radius: var(--radius); box-shadow: var(--shadow); background: var(--panel); overflow: hidden; }
   .cf-fit-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-  .cf-readout { flex: 2; min-width: 0; overflow: auto; border-radius: var(--radius); box-shadow: var(--shadow); background: var(--panel); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
-  .cf-equation, .cf-physics { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.5 Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace; color: var(--text); }
-  .cf-physics { font-size: 12px; color: var(--subtext); padding-top: 10px; border-top: 1px solid var(--divider); }
+  .cf-results { min-width: 0; overflow: auto; border-radius: var(--radius); box-shadow: var(--shadow); background: var(--panel); padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; font-size: 15px; line-height: 1.45; color: var(--text); }
+  .cf-idle { margin: auto 0; font-size: 16px; color: var(--subtext); text-align: center; }
+  .cf-idle.err { color: var(--bad); font-weight: 700; }
+  .cf-res-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+  .cf-res-head h3 { margin: 0; font-size: 18px; color: var(--accent); text-wrap: balance; }
+  .cf-badge { display: inline-flex; align-items: baseline; gap: 8px; padding: 5px 12px; border-radius: 999px; font-weight: 700; font-size: 14px; border: 1px solid currentColor; font-variant-numeric: tabular-nums; }
+  .cf-badge.ok { color: var(--ok); } .cf-badge.warn { color: var(--warn); } .cf-badge.bad { color: var(--bad); }
+  .cf-badge small { font-weight: 600; font-size: 13px; }
+  .cf-eq-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .cf-kicker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); }
+  .cf-eq { font-family: "Cambria Math", "STIX Two Math", "Latin Modern Math", Cambria, "Times New Roman", serif; font-size: 22px; line-height: 1.5; overflow-wrap: anywhere; }
+  .cf-eq.nums { font-size: 19px; color: var(--accent); }
+  .cf-eq sup { font-size: 0.68em; } .cf-eq sub { font-size: 0.68em; }
+  .cf-r2-note { font-size: 14px; color: var(--subtext); margin: 0; }
+  .cf-section-title { margin: 0; font-size: 15px; font-weight: 700; color: var(--text); }
+  .cf-params { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .cf-group { grid-column: 1 / -1; font-size: 13px; font-weight: 700; color: var(--accent); margin-top: 4px; }
+  .cf-param { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .cf-param-top { display: flex; align-items: baseline; gap: 10px; }
+  .cf-sym { font-family: "Cambria Math", "STIX Two Math", Cambria, "Times New Roman", serif; font-size: 24px; color: var(--accent); min-width: 1.4em; }
+  .cf-sym sub { font-size: 0.6em; }
+  .cf-pname { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--subtext); }
+  .cf-val { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cf-val small { font-size: 14px; font-weight: 600; color: var(--subtext); margin-left: 4px; }
+  .cf-meaning { font-size: 14px; color: var(--subtext); }
+  .cf-predict { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .cf-predict .cf-param { background: var(--accent-soft); border-color: transparent; }
+  .cf-predict .cf-sym { font-size: 16px; }
+  .cf-peaks { background: var(--hint-bg); color: var(--hint-text); border-radius: 10px; padding: 10px 14px; font-size: 14px; }
+  .cf-peaks b { color: var(--text); }
   .cf-range { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; }
   .cf-range label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--faint); }
   .cf-range input { width: 100%; height: 36px; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text); font: inherit; font-size: 14px; }
@@ -461,7 +489,7 @@
   .vex-plot-wrap { flex: 3; min-height: 320px; }
   @media (max-width: 1100px) { .brand-sub { display: none; } .gami-xp-text { display: none; } .gami-col { min-width: 96px; } }
   @media (max-width: 900px) {
-    .cf-fit-row { flex-direction: column; }
+    .cf-fit-row { grid-template-columns: minmax(0, 1fr); }
     .gami-col { display: none; }
     .badge-toast { top: 150px; }
   }
@@ -516,7 +544,14 @@
       <option value="range">Range map</option>
     </select>
     <div class="desc" id="viewDesc"></div>
-    <div id="rangeRecRow" hidden>
+    <div id="rangeRecRow" class="range-opts" hidden>
+      <label class="check" title="MTI (moving target indication) removes everything that stands still,&#10;such as walls and furniture, so only moving things show up.&#10;Off: the raw range profile, still objects included.&#10;Changing it restarts the picture."><input id="rangeMtiChk" type="checkbox"> MTI filter (show only moving things)</label>
+      <div class="param-row"><span class="param-name">Distance shown (Y)</span></div>
+      <div class="cf-range" title="The part of the range axis to draw, in metres from the radar (0 to 3.48 m).&#10;The colours are scaled to what is inside it.">
+        <label>From (m)<input id="rangeFrom" type="number" min="0" max="3.4" step="0.1" value="0"></label>
+        <label>To (m)<input id="rangeTo" type="number" min="0.1" max="3.48" step="0.1" value="3.48"></label>
+        <button id="rangeReset" class="minor-btn" title="Show the whole range, 0 to 3.48 m">Reset</button>
+      </div>
       <div class="param-row"><span class="param-name">Recordings</span></div>
       <select id="rangeRecSel" title="Play like live: a recording scrolls by at 10 frames per second (range_map_live.py).&#10;Whole recording: one image of the entire file (range_map_v1.py).">
         <option value="play" selected>Play like live</option>
@@ -701,7 +736,23 @@ Both are reduced to 2D with PCA. The one whose classes form tighter, more separa
 <div id="curvefitPane" class="pane" role="tabpanel" hidden>
   <div class="side">
     <div class="heading">Curve Fitting</div>
-    <div class="desc">Freeze the spectrogram, trace the ridge a moving target leaves, then fit sinusoids to it. A swinging pendulum's frequency predicts its length.</div>
+    <div class="desc">Freeze the picture, trace the curve a moving target leaves (or let Auto Fit find it), then fit a model to it. A swinging pendulum's frequency predicts its length.</div>
+    <hr>
+    <div class="field-label">Picture</div>
+    <select id="cfKind" title="Doppler spectrogram: the target's speed toward or away from the radar over time.&#10;Range map: the target's distance from the radar over time.">
+      <option value="doppler" selected>Doppler spectrogram (speed)</option>
+      <option value="range">Range map (distance)</option>
+    </select>
+    <div id="cfRangeOpts" class="range-opts" hidden>
+      <label class="check" title="MTI (moving target indication) removes everything that stands still,&#10;so walls and furniture do not hide the moving target.&#10;Changing it restarts the picture."><input id="cfMtiChk" type="checkbox"> MTI filter (show only moving things)</label>
+      <div class="param-row"><span class="param-name">Distance shown</span></div>
+      <div class="cf-range">
+        <label>From (m)<input id="cfRFrom" type="number" min="0" max="3.4" step="0.1" value="0"></label>
+        <label>To (m)<input id="cfRTo" type="number" min="0.1" max="3.48" step="0.1" value="3.48"></label>
+        <button id="cfRReset" class="minor-btn" title="Show the whole range, 0 to 3.48 m">Reset</button>
+      </div>
+      <div class="desc">Shared with the range map on the Visualize tab.</div>
+    </div>
     <hr>
     <div class="field-label">Capture</div>
     <button id="cfFreezeBtn" class="primary-btn">❄  Freeze</button>
@@ -722,26 +773,35 @@ Both are reduced to 2D with PCA. The one whose classes form tighter, more separa
     <button id="cfTraceBtn" class="primary-btn">✎  Start Trace</button>
     <button id="cfClearBtn" class="minor-btn" disabled>✕  Clear Trace</button>
     <label class="check" title="Move each traced point onto the brightest bin near it before&#10;fitting, so the fit follows the signal rather than how steady&#10;your hand was."><input id="cfSnap" type="checkbox" checked> Snap to strongest signal</label>
+    <button id="cfAutoBtn" class="primary-btn" title="Freezes the picture, finds the strongest signal at each moment,&#10;marks its high (positive) and low (negative) peaks, and uses them&#10;to start the fit of the model chosen below.">✨  Auto Fit</button>
+    <div class="desc">Auto Fit traces the curve for you and starts the fit from its high and low peaks.</div>
     <hr>
     <div class="field-label">Model</div>
     <label class="check"><input type="radio" name="cfModel" id="cfModelSine" checked> Sinusoid</label>
     <label class="check"><input type="radio" name="cfModel" id="cfModelDamped"> Damped sinusoid</label>
+    <label class="check"><input type="radio" name="cfModel" id="cfModelExp"> Exponential</label>
+    <div id="cfSineOpts" class="range-opts">
     <div class="cf-curves-row">
       <label class="field-label" for="cfCurves">Number of sinusoids</label>
       <select id="cfCurves" title="Fit a sum of this many sinusoids plus an offset.&#10;Use more than one when the trace mixes several swings."><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
     </div>
     <div id="cfFreqs" class="cf-freqs"></div>
     <div class="desc">Leave a starting frequency blank and the fit finds it.</div>
+    </div>
     <button id="cfFitBtn" class="primary-btn" disabled>📈  Fit Curve</button>
     <div id="cfStatus" class="cf-status" role="status"></div>
   </div>
   <div class="cf-main">
     <div class="section-heading" id="cfSpecHeading">Live Spectrogram</div>
     <div id="cfPlotWrap" class="cf-plot-wrap"><canvas id="cfPlot"></canvas></div>
-    <div class="section-heading">Fitted Curve</div>
     <div class="cf-fit-row">
-      <div class="cf-fit-wrap"><canvas id="cfFitPlot"></canvas></div>
-      <div class="cf-readout"><pre id="cfEquation" class="cf-equation"></pre><pre id="cfPhysics" class="cf-physics" hidden></pre></div>
+      <div class="cf-fit-col">
+        <div class="section-heading">Fitted Curve</div>
+        <div class="cf-fit-wrap"><canvas id="cfFitPlot"></canvas></div>
+      </div>
+      <section class="cf-results" id="cfResults" aria-live="polite">
+        <p class="cf-idle" id="cfIdle">Freeze the display, trace a curve, then fit a model to it.</p>
+      </section>
     </div>
   </div>
 </div>

@@ -8,16 +8,17 @@
 //   - Reduce noise switches jet_vmin between -20 and -50 dB and rebuilds the view,
 //   - frames are not processed while the tab is hidden (VisualizeTab.on_raw_frame).
 // The View choice switches to the range map (range_map_live.py, and
-// range_map_v1.py for a whole recording at once); MTI is set in src/config.js.
+// range_map_v1.py for a whole recording at once). Team feedback: MTI is
+// switched on the panel (its starting value still comes from src/config.js or
+// ?range_mode=), and the distance shown is configurable.
 
 import { LiveProcessorClient } from '../dsp/live_client.js';
 import { LiveSpectrogramPlot } from '../viz/live_plot.js';
 import { RangeMapClient } from '../dsp/range_client.js';
 import { RangeMapPlot } from '../viz/range_plot.js';
-import { rangeMapMode } from '../config.js';
 import { parseNpy, framesFromNpy, writeNpyFloat32 } from '../io/npy.js';
 import { subscribeFrames, isConnected, radarStats, disconnectRadar } from './radar_session.js';
-import { currentJetVmin, getReduceNoise, setReduceNoise, onReduceNoiseChange } from './settings.js';
+import { currentJetVmin, getReduceNoise, setReduceNoise, onReduceNoiseChange, getRangeSettings, setRangeSettings, onRangeSettingsChange, rangeMode, RANGE_MAX_M } from './settings.js';
 
 const FPS = 10;                       // frame_repetition_time_s = 0.1
 const REDRAW_MS = 200;                // ReferenceSpectrogramView._REDRAW_MS
@@ -45,8 +46,8 @@ const state = {
   rangeRec: 'play',      // a recording in the range view: 'play' like live, or the 'whole' file at once
   rec: null,             // the open recording (for the whole-file range map)
 };
-const RANGE_MODE = rangeMapMode();
-const rangeTitle = live => `Range map (${live ? 'live, ' : ''}${RANGE_MODE === 'mti' ? 'moving' : 'raw'})`;
+const rangeTitle = live => `Range map (${live ? 'live, ' : ''}${rangeMode() === 'mti' ? 'moving' : 'raw'})`;
+const distanceText = () => { const d = getRangeSettings(); return `${d.min.toFixed(2)} to ${d.max.toFixed(2)} m`; };
 
 const visible = () => !pane.hidden;
 const historyFrames = () => Math.max(10, Math.round(state.timeWindow * FPS));
@@ -56,7 +57,7 @@ function buildView() {
   const { nChirp, nSample } = state.dims;
   $('methodRow').hidden = state.view !== 'doppler';
   $('rangeRecRow').hidden = state.view !== 'range';
-  $('viewDesc').textContent = state.view === 'range' ? `512 range bins, 0 to 3.48 m  ·  MTI ${RANGE_MODE === 'mti' ? 'on' : 'off'}` : '';
+  $('viewDesc').textContent = state.view === 'range' ? `512 range bins, 0 to ${RANGE_MAX_M} m  ·  MTI ${rangeMode() === 'mti' ? 'on' : 'off'}` : '';
   if (state.view === 'range') { buildRangeView(); return; }
   state.proc ??= new LiveProcessorClient(({ history, dopplerBins, count }) => { state.count = count; state.pending = { history, count, dopplerBins }; });
   state.proc.reset({ nSample, nChirp, historyLength: historyFrames() });
@@ -73,13 +74,14 @@ function buildRangeView() {
   state.count = 0;
   state.pending = null;
   const whole = state.rangeRec === 'whole' && state.source;
-  state.plot = new RangeMapPlot(canvas, { layout: whole ? 'recording' : 'live', jetVmin: currentJetVmin(), title: rangeTitle(!whole) });
+  const { min, max } = getRangeSettings();
+  state.plot = new RangeMapPlot(canvas, { layout: whole ? 'recording' : 'live', jetVmin: currentJetVmin(), title: rangeTitle(!whole), distance: { min, max } });
   if (whole) {
     const { rec } = state, per = rec.nChirp * rec.nSample, all = new Float32Array(rec.nFrame * per);
     for (let i = 0; i < rec.nFrame; i++) all.set(rec.antenna0(i), i * per);
-    state.rangeProc.whole({ frames: all, nFrame: rec.nFrame, nChirp: rec.nChirp, nSample: rec.nSample, mode: RANGE_MODE });
+    state.rangeProc.whole({ frames: all, nFrame: rec.nFrame, nChirp: rec.nChirp, nSample: rec.nSample, mode: rangeMode() });
     setStatus(`${state.source.name}: range map of all ${rec.nFrame} frames`);
-  } else state.rangeProc.reset({ nSample, nChirp, historyLength: historyFrames(), mode: RANGE_MODE });
+  } else state.rangeProc.reset({ nSample, nChirp, historyLength: historyFrames(), mode: rangeMode() });
   if (visible()) state.plot.drawEmpty();
   updateReadout();
 }
@@ -90,9 +92,10 @@ function updateReadout() {
     $('readout').textContent =
       `Drawn by       range_map${state.rangeRec === 'whole' && state.source ? '_v1' : '_live'}.py\n` +
       `Antenna        ${REF_ANTENNA}\n` +
-      `Mode           ${RANGE_MODE === 'mti' ? 'MTI (moving only)' : 'raw (no MTI)'}\n` +
+      `Mode           ${rangeMode() === 'mti' ? 'MTI (moving only)' : 'raw (no MTI)'}\n` +
       `History        ${frames} frames (${(frames / 10).toFixed(0)} s)\n` +
-      `Range          0 to 3.48 m, 512 bins\n` +
+      `Range          0 to ${RANGE_MAX_M} m, 512 bins\n` +
+      `Shown          ${distanceText()}\n` +
       `Color floor    ${currentJetVmin().toFixed(0)} dB (jet_vmin)\n` +
       `Redraw         ${(1000 / REDRAW_MS).toFixed(0)} per second`;
     return;
@@ -227,6 +230,27 @@ $('viewSel').onchange = e => {
   buildView();
 };
 $('rangeRecSel').onchange = e => { state.rangeRec = e.target.value; buildView(); };
+
+// Range map: MTI on or off, and the distance shown (shared with Curve Fit)
+function syncRangeInputs() {
+  const r = getRangeSettings();
+  $('rangeMtiChk').checked = r.mti;
+  $('rangeFrom').value = r.min.toFixed(2).replace(/\.?0+$/, '') || '0';
+  $('rangeTo').value = r.max.toFixed(2).replace(/\.?0+$/, '');
+}
+syncRangeInputs();
+$('rangeMtiChk').onchange = e => setRangeSettings({ mti: e.target.checked });
+const applyDistance = () => setRangeSettings({ min: Number($('rangeFrom').value), max: Number($('rangeTo').value) });
+$('rangeFrom').onchange = applyDistance;
+$('rangeTo').onchange = applyDistance;
+$('rangeReset').onclick = () => setRangeSettings({ min: 0, max: RANGE_MAX_M });
+onRangeSettingsChange((r, changed) => {
+  syncRangeInputs();
+  if (state.view !== 'range') return;
+  if (changed.mti) { buildView(); return; }          // a new mode starts the history again
+  state.plot?.setDistance?.({ min: r.min, max: r.max });
+  updateReadout();
+});
 
 let rebuildTimer = null;
 $('timeSlider').oninput = e => {

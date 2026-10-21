@@ -11,24 +11,38 @@ time. It is a port of two scripts, kept unchanged in `reference/python/`:
 
 Both use antenna 0. Live, the web app reads antenna 0 from the radar's
 three-antenna stream, so the sensor setup stays as it is (the script streams
-only the chosen antenna). The chirp is the same: 58 to 63.5 GHz, 2 MHz, 256
-samples, 128 chirps, 0.1 s frames.
+only the chosen antenna). The scripts assume 2 MHz sampling, the radar now
+samples at 1 MHz; the sample rate cancels out of the range axis, so 0 to 3.48 m
+holds for both.
 
 The time window slider sets the live history (10 frames a second), and
-**Reduce noise** sets the colour floor (jet_vmin) to -50 dB instead of -20 dB,
-as in the Doppler view.
+**Reduce noise** sets the colour floor (jet_vmin), as in the Doppler view.
+
+## Distance shown
+
+**Distance shown (Y)** sets the part of the range axis that is drawn: **From**
+and **To** in metres (0 to 3.48 m), **Reset** for all of it. Only the range bins
+inside it are drawn and the colours are scaled to them, so a strong still
+object outside the window (the table the radar sits on, a wall) no longer
+washes out the target.
 
 ## MTI
 
-MTI (moving targets only: Doppler power without the zero-velocity bin) is off
-by default; the map then shows the mean range-FFT magnitude, so walls and other
-still objects stay visible. It is not in the page's controls. To change it:
+**MTI filter (show only moving things)** turns MTI on and off. MTI keeps the
+Doppler power without the zero-velocity bin, so only moving targets show.
+Off, the map shows the mean range-FFT magnitude, and walls and other still
+objects stay visible. Changing it restarts the picture.
+
+MTI starts off. The starting value can still be changed:
 
 - for everyone: set `mode: 'mti'` in `RANGE_MAP` in `src/config.js`;
 - for one visit: add `?range_mode=mti` to the page address (`?range_mode=raw`
   turns it off again).
 
-The readout under the panel shows which mode is in use.
+The browser remembers the checkbox (and the distance) for next time; a
+remembered choice wins over `src/config.js`, and `?range_mode=` in the address
+wins over both. Both settings are shared with the range map on the Curve Fit tab.
+The readout under the panel shows the mode and the distance in use.
 
 ## Checked against the scripts
 
