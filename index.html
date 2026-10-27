@@ -384,6 +384,17 @@
   /* Badge list (the desktop's "View All" panel) */
   .badge-dialog { width: min(480px, calc(100vw - 32px)); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; background: var(--panel); color: var(--text); box-shadow: 0 20px 50px rgba(0,0,0,.3); }
   .badge-dialog::backdrop { background: rgba(8, 15, 30, .45); }
+  /* Analysis: the selected sample drawn as the Visualize tab draws it */
+  .detail.wide { width: 400px; }
+  .fig-frame { position: relative; width: 100%; border: 1px solid var(--input-border); border-radius: 5px; overflow: hidden; background: #ffffff; }
+  .fig-canvas { display: block; width: 100%; height: auto; cursor: zoom-in; }
+  .fig-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px; font-size: 12px; color: #4a5b73; background: rgba(255,255,255,.85); }
+  .fig-msg:empty { display: none; }
+  .fig-dialog { width: min(1040px, calc(100vw - 32px)); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px 16px; background: var(--panel); color: var(--text); box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+  .fig-dialog::backdrop { background: rgba(8, 15, 30, .55); }
+  .fig-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .fig-dialog .fig-canvas { cursor: default; border-radius: 8px; }
+  @media (max-width: 900px) { .detail.wide { width: 100%; } }
   .badge-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
   .badge-title { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
   .badge-xp { font-size: 12px; font-weight: 600; color: var(--subtext); background: var(--input-bg); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
@@ -663,9 +674,9 @@
       <select id="colorSel"><option value="gesture">Gesture</option><option value="student">Student</option></select>
       <hr>
       <div class="field-label">Export for CODAP</div>
-      <div class="note">Summary: one line for each gesture you recorded, holding its four measurements. Use this to compare gestures.
+      <div class="note">Summary: one line for each gesture you recorded, holding its five measurements. Use this to compare gestures.
 
-Frames: one line for every picture the radar took, ten per second. Use this to see how distance and speed changed while a single gesture was happening.</div>
+Frames: one line for every picture the radar took, ten per second. Use this to see how distance, speed and the highest and lowest velocities in the micro-Doppler changed while a single gesture was happening.</div>
       <button id="summaryCsvBtn" class="minor-btn" disabled>⤓  Summary CSV</button>
       <button id="framesCsvBtn" class="minor-btn" disabled>⤓  Frames CSV</button>
       <div class="spacer"></div>
@@ -678,12 +689,16 @@ Frames: one line for every picture the radar took, ten per second. Use this to s
       <div class="note" id="featCaption">Extract features to plot them.</div>
       <div class="tip" id="featTip" hidden></div>
     </div>
-    <div class="detail">
+    <div class="detail wide">
       <div class="heading">Selected Sample</div>
       <hr>
-      <div class="note" id="detailHint">Click any point on the plot to see the recording it came from: its spectrogram picture and all of its measurements.</div>
+      <div class="note" id="detailHint">Click any point on the plot to see the recording it came from: its micro-Doppler and range map, and all of its measurements.</div>
       <div id="detailBody" hidden>
-        <div class="img-frame"><img id="detailImg" alt="Spectrogram training image for the selected sample" hidden><span id="detailNoImg" hidden>No spectrogram image was saved next to this recording.</span></div>
+        <div class="field-label">Micro-Doppler (as on Visualize)</div>
+        <div class="fig-frame"><canvas id="detailDoppler" class="fig-canvas" role="button" tabindex="0" aria-label="Micro-Doppler spectrogram of the selected sample; click to see it large"></canvas><span class="fig-msg" id="detailDopplerMsg"></span></div>
+        <div class="field-label">Range map (as on Visualize)</div>
+        <div class="fig-frame"><canvas id="detailRange" class="fig-canvas" role="button" tabindex="0" aria-label="Range map of the selected sample; click to see it large"></canvas><span class="fig-msg" id="detailRangeMsg"></span></div>
+        <div class="small">Drawn from the raw recording by the Visualize tab's own plots. The range map follows its MTI and distance settings. Click a picture to see it large.</div>
         <div class="detail-meta"><b id="detailGesture"></b>  ·  <span id="detailStudent"></span><br><span id="detailName"></span><br><span id="detailFrames"></span></div>
         <hr>
         <div class="field-label">Measurements</div>
@@ -1027,6 +1042,11 @@ Both are reduced to 2D with PCA. The one whose classes form tighter, more separa
   <span id="toastIcon" class="toast-icon">🏅</span>
   <span class="toast-text"><span id="toastTitle" class="toast-title">Badge Earned!</span><span id="toastDesc" class="toast-desc"></span></span>
 </div>
+
+<dialog id="figDialog" class="fig-dialog" aria-labelledby="figDialogTitle">
+  <div class="fig-dialog-head"><span id="figDialogTitle" class="badge-title"></span><button id="figDialogClose" class="btn-primary">Close</button></div>
+  <canvas id="figDialogCanvas" class="fig-canvas"></canvas>
+</dialog>
 
 <dialog id="badgeDialog" class="badge-dialog" aria-labelledby="badgeTitle">
   <div class="badge-head"><span id="badgeTitle" class="badge-title">🏅  Your Badges</span><span id="badgeXp" class="badge-xp"></span></div>

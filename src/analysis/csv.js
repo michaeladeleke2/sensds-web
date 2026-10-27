@@ -1,6 +1,7 @@
 // CSV export in the exact text SensDSv2's core/physical_features.py writes:
 // Python csv.writer (excel dialect: comma, minimal quoting, CRLF) with values
-// formatted as f"{v:.6g}".
+// formatted as f"{v:.6g}", and a value a frame does not have (NaN) left blank,
+// which CODAP reads as missing (_csv_value).
 
 import { SUMMARY_KEYS, FRAME_KEYS } from './physical_features.js';
 
@@ -24,6 +25,7 @@ function field(v) {
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 const row = cells => cells.map(field).join(',') + '\r\n';
+const csvValue = v => (Number.isFinite(v) ? pyG(v) : '');
 
 export const SUMMARY_ID_COLS = ['sample_id', 'student', 'gesture', 'file'];
 export const FRAME_ID_COLS = ['sample_id', 'student', 'gesture', 'frame'];
@@ -31,7 +33,7 @@ export const FRAME_ID_COLS = ['sample_id', 'student', 'gesture', 'frame'];
 // records: [{ student, gesture, name, summary }]
 export function summaryCsv(records) {
   let out = row([...SUMMARY_ID_COLS, ...SUMMARY_KEYS]);
-  records.forEach((r, i) => { out += row([i + 1, r.student, r.gesture, r.name, ...SUMMARY_KEYS.map(k => pyG(r.summary[k]))]); });
+  records.forEach((r, i) => { out += row([i + 1, r.student, r.gesture, r.name, ...SUMMARY_KEYS.map(k => csvValue(r.summary[k]))]); });
   return out;
 }
 
@@ -41,7 +43,7 @@ export function framesCsv(records) {
   let rows = 0;
   records.forEach((r, i) => {
     for (let j = 0; j < r.series.time_s.length; j++) {
-      out += row([i + 1, r.student, r.gesture, j, ...FRAME_KEYS.map(k => pyG(r.series[k][j]))]);
+      out += row([i + 1, r.student, r.gesture, j, ...FRAME_KEYS.map(k => csvValue(r.series[k][j]))]);
       rows++;
     }
   });

@@ -3,17 +3,20 @@
 //
 // { type: 'features', items: [{ file, student, gesture, name }] }
 // { type: 'pca',      items: [{ file, gesture, name }] }
+// { type: 'preview',  id, file, mode }   one sample as the Visualize tab draws it
 // { type: 'stop' }
 
 import { parseNpy } from '../io/npy.js';
 import { extract } from './physical_features.js';
 import { spectrogramFeatures, rangeFftFeatures, pca, silhouette } from './pca_analysis.js';
+import { samplePreview } from './preview.js';
 
 const MIN_CLASSES = 2, MIN_SAMPLES = 6;
 let running = false;
 
 self.onmessage = async ({ data }) => {
   if (data.type === 'stop') { running = false; return; }
+  if (data.type === 'preview') { runPreview(data); return; }
   running = true;
   try {
     if (data.type === 'features') await runFeatures(data.items);
@@ -37,11 +40,22 @@ async function runFeatures(items) {
     let cube;
     try { cube = await load(s); } catch (e) { self.postMessage({ type: 'error', message: `Could not read ${s.name}:\n${e.message}` }); return; }
     if (!cube) continue;
-    const { summary, series } = extract(cube.data, cube.shape);
+    const { summary, series } = extract(cube.data, cube.shape, { chirpRepS: s.chirpRepS });
     out.push({ index: i, summary, series });
   }
   if (!out.length) { self.postMessage({ type: 'error', message: 'No usable raw samples found.' }); return; }
   self.postMessage({ type: 'features-done', records: out });
+}
+
+async function runPreview({ id, file, mode }) {
+  try {
+    const cube = await load({ file });
+    if (!cube) throw new Error('not a raw radar recording');
+    const p = samplePreview(cube.data, cube.shape, mode);
+    self.postMessage({ type: 'preview-done', id, ...p }, [p.doppler.buffer, p.rangeMap.buffer]);
+  } catch (e) {
+    self.postMessage({ type: 'preview-error', id, message: e.message });
+  }
 }
 
 async function runPca(items) {

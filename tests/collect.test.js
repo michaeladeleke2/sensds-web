@@ -85,7 +85,7 @@ test('sample numbering, counting and file names follow the desktop', () => {
 
 test('capture_info.json matches json.dump(indent=2) and mismatch messages', () => {
   const json = captureInfoJson(-20, new Date(2026, 9, 5, 9, 4, 7));
-  assert.equal(json, '{\n  "spectrogram_method": "infineon",\n  "renderer": "reference",\n  "velocity_flipped": true,\n  "updated": "2026-10-05 09:04:07",\n  "jet_vmin": -20.0\n}');
+  assert.equal(json, '{\n  "spectrogram_method": "infineon",\n  "renderer": "reference",\n  "velocity_flipped": true,\n  "updated": "2026-10-05 09:04:07",\n  "chirp_repetition_time_s": 0.0003,\n  "jet_vmin": -20.0\n}');
   const info = JSON.parse(json);
   assert.equal(captureMismatch(true, info, -20), '');
   assert.match(captureMismatch(true, info, -50), /Reduce noise setting was different/);

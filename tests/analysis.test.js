@@ -17,7 +17,15 @@ const real = parseNpy(realBuf.buffer.slice(realBuf.byteOffset, realBuf.byteOffse
 const SAMPLES = [{ name: 'real', cube: real.data, shape: real.shape },
   ...Array.from({ length: 8 }, (_, v) => ({ name: `syn${v}`, cube: syntheticCube(v), shape: [7, 3, 128, 256] }))];
 
-const maxRel = (a, b) => { let m = 0; for (let i = 0; i < a.length; i++) m = Math.max(m, Math.abs(a[i] - b[i]) / Math.max(1, Math.abs(b[i]))); return m; };
+// null in the fixture is NaN (a frame with no micro-Doppler signature): both sides must have it
+const maxRel = (a, b) => {
+  let m = 0;
+  for (let i = 0; i < a.length; i++) {
+    if (b[i] === null) { if (!Number.isNaN(a[i])) return Infinity; continue; }
+    m = Math.max(m, Math.abs(a[i] - b[i]) / Math.max(1, Math.abs(b[i])));
+  }
+  return m;
+};
 
 const results = SAMPLES.map(s => ({ ...s, ...extract(s.cube, s.shape) }));
 
@@ -70,4 +78,59 @@ test('PCA variance, projections (up to sign) and silhouette match', () => {
     const sil = silhouette(proj, meta.labels);
     assert.ok(Math.abs(sil - meta[`${key}_sil`]) < 1e-6, `${key} silhouette ${sil} vs ${meta[`${key}_sil`]}`);
   }
+});
+
+// ── team feedback: velocity span, chirp spacing, the Visualize-style preview ──
+
+import { CHIRP_REP_S, FRAME_KEYS, featureLabel } from '../src/analysis/physical_features.js';
+import { samplePreview } from '../src/analysis/preview.js';
+import { LiveDopplerProcessor } from '../src/dsp/doppler_live.js';
+import { computeRangeMap } from '../src/dsp/range_map.js';
+
+// A target 0.8 m away swinging toward and away from the radar
+function swing(amp = 0.15, f = 0.7, chirpS = 0.0003, nF = 12) {
+  const C = 299792458, slope = 5.5e9 / 256e-6, lam = C / 60.75e9;
+  const a = new Float32Array(nF * 3 * 128 * 256);
+  let r = 7;
+  const rnd = () => ((r = (r * 1103515245 + 12345) % 2147483648) / 2147483648 - 0.5);
+  for (let i = 0; i < nF; i++) for (let c = 0; c < 128; c++) {
+    const t = i * 0.1 + c * chirpS, R = 0.8 + amp * Math.sin(2 * Math.PI * f * t), fb = 2 * slope * R / C;
+    for (let s = 0; s < 256; s++) {
+      const v = 0.5 + 0.02 * Math.cos(2 * Math.PI * fb * s / 1e6 + 4 * Math.PI * R / lam) + 0.004 * rnd();
+      for (let an = 0; an < 3; an++) a[((i * 3 + an) * 128 + c) * 256 + s] = v;
+    }
+  }
+  return { cube: a, shape: [nF, 3, 128, 256] };
+}
+
+test('velocity span: exposed, follows the swing, none for a still target', () => {
+  assert.ok(SUMMARY_KEYS.includes('vel_span_ms') && FRAME_KEYS.includes('vel_upper_ms'));
+  assert.equal(featureLabel('vel_span_ms'), 'Velocity span (m/s)');
+  const push = swing(), wave = swing(0.04, 1.5), still = swing(0);
+  const span = s => extract(s.cube, s.shape).summary.vel_span_ms;
+  const truePush = 2 * 0.15 * 2 * Math.PI * 0.7;
+  assert.ok(Math.abs(span(push) - truePush) < 0.3, `push ${span(push)}`);
+  assert.ok(span(push) > span(wave) && span(wave) > span(still));
+  assert.ok(span(still) < 0.2, `still ${span(still)}`);
+});
+
+test('Doppler velocities use the chirp spacing the sample was recorded with', () => {
+  assert.equal(CHIRP_REP_S, 0.0003);
+  const old = swing(0.15, 0.7, 0.0002);
+  const right = extract(old.cube, old.shape, { chirpRepS: 0.0002 }).summary.vel_span_ms;
+  const wrong = extract(old.cube, old.shape).summary.vel_span_ms;
+  assert.ok(Math.abs(wrong / right - 2 / 3) < 0.05, `${wrong} / ${right}`);
+});
+
+test('the sample preview is the Visualize processing over every frame', () => {
+  const { cube, shape } = swing();
+  const p = samplePreview(cube, shape, 'mti');
+  const per = 128 * 256, frameAt = i => cube.subarray((i * 3) * per, (i * 3 + 1) * per);
+  const proc = new LiveDopplerProcessor({ nSample: 256, nChirp: 128, historyLength: 12 });
+  let hist;
+  for (let i = 0; i < 12; i++) hist = proc.processFrame(frameAt(i)).history;
+  assert.deepEqual([...p.doppler], [...hist]);
+  assert.deepEqual([...p.rangeMap], [...computeRangeMap(frameAt, 12, 128, 256, 'mti').map]);
+  assert.equal(p.mode, 'mti');
+  assert.equal(p.nFrame, 12);
 });

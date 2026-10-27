@@ -13,11 +13,43 @@ Edge on a computer. The radar does not need to be connected.
 3. Check the Dataset box: number of raw samples, gestures and students.
 4. Click **Extract Features**. A progress bar runs while each sample is processed.
 5. Pick the **X axis**, **Y axis** and **Color by** (gesture or student). The plot redraws.
-6. Hover a point to see its sample; click it to see its spectrogram picture and its four measurements
-   on the right (the two on the plot are highlighted).
+6. Hover a point to see its sample; click it to see it on the right: its **micro-Doppler** and
+   **range map**, drawn from the raw recording by the Visualize tab's own plots (the spectrogram at
+   ±4.11 m/s with the same colour floor; the range map with the Visualize tab's MTI and distance
+   settings), and its five measurements (the two on the plot are highlighted). Click a picture to see
+   it large. These replace the training PNG saved at capture time, which could have been drawn with
+   older settings.
 7. Scroll to zoom, drag to pan, or use the −, + and Reset buttons.
 8. **Summary CSV** saves one row per sample; **Frames CSV** saves one row per radar frame.
    The save dialog opens in `<data folder>/exports`. Open the files in CODAP.
+
+### The measurements
+
+| Measurement | What it is |
+| --- | --- |
+| Distance from radar | Mean distance of the strongest moving return |
+| Distance traveled | Farthest minus nearest distance during the gesture |
+| Peak speed (toward/away) | Fastest change of that distance between frames |
+| Mean speed (toward/away) | Average of that change, ignoring direction |
+| Velocity span | Highest velocity in the gesture's micro-Doppler signature minus the lowest |
+
+**Velocity span** (requested by Dr. Hazel) is not mean speed. Mean speed comes from how the tracked
+distance changes frame to frame. Velocity span is read off the micro-Doppler: in each frame, the
+signature is the Doppler bins at least 15 dB above that frame's noise floor and within 10 dB of its
+strongest bin; the span is the highest of those velocities over the whole sample minus the lowest.
+Noise never clears the bar, so a still hand gives 0; a push-and-pull, which swings from toward to
+away, gives a wide span. On synthetic swings it reads about 0.1 to 0.25 m/s above the true peak to peak
+velocity, from the width of the signature in each frame.
+
+The Frames CSV has the per-frame top and bottom of the signature (`vel_upper_ms`, `vel_lower_ms`),
+left blank in frames with no signature, so the span can be checked in CODAP.
+
+Doppler velocities depend on the chirp spacing a sample was recorded with. The radar now uses 0.3 ms
+(it was 0.2 ms before the visualization change note). The Collect tab writes it into
+`capture_info.json` as `chirp_repetition_time_s`, and the Analysis tab reads each folder's value; a
+folder without one is read as 0.3 ms. Velocity spans of samples recorded before the chirp change come
+out two thirds of their true value, so collect those gestures again. The distance and speed
+measurements do not depend on the chirp spacing.
 
 ## PCA Comparison
 

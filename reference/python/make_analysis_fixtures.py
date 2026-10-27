@@ -66,7 +66,9 @@ def main():
         out["samples"].append({
             "name": name, "label": label,
             "summary": summary,
-            "series": {k: np.asarray(v).tolist() for k, v in series.items()},
+            # A frame with no micro-Doppler signature has NaN, which JSON writes as null
+            "series": {k: [None if not np.isfinite(x) else x for x in np.asarray(v, dtype=float).tolist()]
+                       for k, v in series.items()},
         })
         np.asarray(sf, "<f8").tofile(OUT / f"spec_feat_{name}.f64")
         np.asarray(rf, "<f8").tofile(OUT / f"rfft_feat_{name}.f64")

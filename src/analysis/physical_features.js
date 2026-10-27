@@ -1,6 +1,11 @@
 // Port of SensDSv2 core/physical_features.py: interpretable quantities
 // (distance, speed, Doppler velocity and spread) from a raw radar cube
 // (n_frame, n_ant, n_chirp, n_sample), with the same constants and steps.
+//
+// Doppler velocities depend on the chirp spacing a sample was recorded with.
+// The radar now uses 0.3 ms (the visualization change note; it was 0.2 ms), so
+// the Collect tab records it in capture_info.json and samples are read with the
+// spacing their folder says, or the current one when the folder does not say.
 
 import { fft, pairwiseSum } from '../dsp/fft.js';
 import { blackmanharris, chebwin } from '../dsp/windows.js';
@@ -11,15 +16,23 @@ export const F_START = 58.0e9, F_END = 63.5e9;
 export const BANDWIDTH = F_END - F_START;
 export const F_CENTER = (F_START + F_END) / 2;
 export const WAVELENGTH = C / F_CENTER;
-export const CHIRP_REP_S = 0.0002;
+export const CHIRP_REP_S = 0.0003;               // the radar's chirp spacing now (was 0.0002)
 export const PRF = 1.0 / CHIRP_REP_S;
 export const FRAME_S = 0.10;
 export const MAX_VELOCITY = PRF * WAVELENGTH / 4;
+// The Doppler axis edge, m/s, for a chirp spacing in seconds
+export const maxVelocity = (chirpRepS = CHIRP_REP_S) => WAVELENGTH / (4.0 * chirpRepS);
 export const RANGE_RES_M = C / (2 * BANDWIDTH);
 export const N_SAMPLES_CFG = 256;
 export const MAX_RANGE_M = N_SAMPLES_CFG * C / (4 * BANDWIDTH);
 const RANGE_FFT_MULT = 4, DOPPLER_FFT_MULT = 4, CLIP_VALUE = 1e-6;
 export const MOTION_SPEED_MS = 0.25;
+// The micro-Doppler signature of a frame: the Doppler bins at least
+// SIGNATURE_DB above the frame's own noise floor (its median), so receiver
+// noise never counts and a frame with nothing moving has no signature, and
+// within SIGNATURE_PEAK_DB of the frame's strongest bin, so the faint skirts of
+// a strong return do not stretch it.
+export const SIGNATURE_DB = 15.0, SIGNATURE_PEAK_DB = 10.0;
 
 export const ALL_SUMMARY_FEATURES = [
   ['range_mean_m', 'Distance from radar', 'm'],
@@ -31,6 +44,7 @@ export const ALL_SUMMARY_FEATURES = [
   ['vel_peak_ms', 'Peak Doppler velocity', 'm/s'],
   ['vel_mean_ms', 'Mean Doppler velocity', 'm/s'],
   ['vel_std_ms', 'Velocity variability', 'm/s'],
+  ['vel_span_ms', 'Velocity span', 'm/s'],
   ['accel_peak_ms2', 'Peak acceleration', 'm/s²'],
   ['accel_mean_ms2', 'Mean |acceleration|', 'm/s²'],
   ['doppler_spread_ms', 'Doppler spread', 'm/s'],
@@ -50,18 +64,28 @@ export const ALL_FRAME_FEATURES = [
   ['accel_ms2', 'Acceleration', 'm/s²'],
   ['doppler_spread_ms', 'Doppler spread', 'm/s'],
   ['energy', 'Return energy', 'a.u.'],
+  ['vel_upper_ms', 'Highest velocity in the signature', 'm/s'],
+  ['vel_lower_ms', 'Lowest velocity in the signature', 'm/s'],
 ];
-// The exposed set: distance and speed only, as in SensDSv2.
+// The exposed set, as in SensDSv2: distance and speed, plus velocity span
+// (requested by Dr. Hazel), the one Doppler feature: the highest velocity in
+// the gesture's micro-Doppler signature minus the lowest, over the whole
+// sample (SIGNATURE_DB, SIGNATURE_PEAK_DB say which bins are the signature).
+// It is not mean speed: mean speed averages how fast the tracked distance
+// changes, while the span is how wide a range of velocities the gesture covers.
 export const SUMMARY_FEATURES = [
   ['range_mean_m', 'Distance from radar', 'm'],
   ['range_travel_m', 'Distance traveled', 'm'],
   ['radial_speed_max_ms', 'Peak speed (toward/away)', 'm/s'],
   ['radial_speed_mean_ms', 'Mean speed (toward/away)', 'm/s'],
+  ['vel_span_ms', 'Velocity span', 'm/s'],
 ];
 export const FRAME_FEATURES = [
   ['time_s', 'Time', 's'],
   ['range_m', 'Distance', 'm'],
   ['radial_speed_ms', 'Speed (toward/away)', 'm/s'],
+  ['vel_upper_ms', 'Highest velocity in the signature', 'm/s'],
+  ['vel_lower_ms', 'Lowest velocity in the signature', 'm/s'],
 ];
 export const SUMMARY_KEYS = SUMMARY_FEATURES.map(f => f[0]);
 export const FRAME_KEYS = FRAME_FEATURES.map(f => f[0]);
@@ -104,8 +128,8 @@ function chirpSpectrum(cube, base, nSample, fftSize, rwin, re, im) {
   fft(re, im);
 }
 
-// frame_series(cube): per-frame physical quantities.
-export function frameSeries(cube, shape) {
+// frame_series(cube, chirp_rep_s): per-frame physical quantities.
+export function frameSeries(cube, shape, chirpRepS = CHIRP_REP_S) {
   const [nFrame, nAnt, nChirp, nSample] = shape;
   const fftSize = nSample * RANGE_FFT_MULT, nBins = fftSize / 2, dfft = nChirp * DOPPLER_FFT_MULT;
   const { rwin, dwin } = windows(nSample, nChirp);
@@ -145,9 +169,12 @@ export function frameSeries(cube, shape) {
   }
 
   // _doppler_at_bins: Doppler spectrum of the tracked bin, antenna 0
-  const velAxis = linspace(-MAX_VELOCITY, MAX_VELOCITY, dfft);
+  const vmax = maxVelocity(chirpRepS);
+  const velAxis = linspace(-vmax, vmax, dfft);
   const floor = 20.0 * Math.log10(CLIP_VALUE);
   const velocity = new Float64Array(nFrame), spread = new Float64Array(nFrame);
+  const upper = new Float64Array(nFrame).fill(NaN), lower = new Float64Array(nFrame).fill(NaN);
+  const dbs = new Float64Array(dfft), sorted = new Float64Array(dfft);
   const sRe = new Float64Array(nChirp), sIm = new Float64Array(nChirp);
   const dRe = new Float64Array(dfft), dIm = new Float64Array(dfft), w = new Float64Array(dfft), tmp = new Float64Array(dfft);
   for (let f = 0; f < nFrame; f++) {
@@ -165,6 +192,7 @@ export function frameSeries(cube, shape) {
       const src = (k + dfft / 2) % dfft;
       const power = Math.hypot(dRe[src], dIm[src]) ** 2;
       const db = power >= CLIP_VALUE ** 2 ? 10.0 * Math.log10(power) : floor;
+      dbs[k] = db;
       w[k] = 10.0 ** (db / 10.0);
       if (w[k] < wmin) wmin = w[k];
     }
@@ -176,6 +204,15 @@ export function frameSeries(cube, shape) {
     velocity[f] = pairwiseSum(tmp, 0, dfft);
     for (let k = 0; k < dfft; k++) tmp[k] = (velAxis[k] - velocity[f]) ** 2 * w[k];
     spread[f] = Math.sqrt(pairwiseSum(tmp, 0, dfft));
+    // The signature's top and bottom (NaN with no signature)
+    sorted.set(dbs); sorted.sort();
+    const med = dfft % 2 ? sorted[dfft >> 1] : (sorted[dfft / 2 - 1] + sorted[dfft / 2]) / 2;
+    const thr = Math.max(med + SIGNATURE_DB, sorted[dfft - 1] - SIGNATURE_PEAK_DB);
+    for (let k = 0; k < dfft; k++) {
+      if (dbs[k] < thr) continue;
+      if (!(upper[f] >= velAxis[k])) upper[f] = velAxis[k];
+      if (!(lower[f] <= velAxis[k])) lower[f] = velAxis[k];
+    }
   }
 
   const radial = new Float64Array(nFrame), accel = new Float64Array(nFrame);
@@ -189,6 +226,8 @@ export function frameSeries(cube, shape) {
     accel_ms2: accel,
     doppler_spread_ms: spread,
     energy,
+    vel_upper_ms: upper,
+    vel_lower_ms: lower,
   };
 }
 
@@ -196,6 +235,16 @@ const sum = a => pairwiseSum(a, 0, a.length);
 const mean = a => sum(a) / a.length;
 const maxOf = a => a.reduce((m, v) => (v > m ? v : m), -Infinity);
 const minOf = a => a.reduce((m, v) => (v < m ? v : m), Infinity);
+
+// _span: highest minus lowest signature velocity over the sample; 0 with no signature
+function span(s) {
+  let hi = -Infinity, lo = Infinity;
+  for (let i = 0; i < s.vel_upper_ms.length; i++) {
+    if (Number.isFinite(s.vel_upper_ms[i])) hi = Math.max(hi, s.vel_upper_ms[i]);
+    if (Number.isFinite(s.vel_lower_ms[i])) lo = Math.min(lo, s.vel_lower_ms[i]);
+  }
+  return Number.isFinite(hi) ? hi - lo : 0.0;
+}
 
 // summarize(series)
 export function summarize(s) {
@@ -225,6 +274,7 @@ export function summarize(s) {
     vel_peak_ms: maxOf(absVel),
     vel_mean_ms: vm,
     vel_std_ms: Math.sqrt(mean(vel.map(v => (v - vm) ** 2))),
+    vel_span_ms: span(s),
     accel_peak_ms2: maxOf(absAcc),
     accel_mean_ms2: mean(absAcc),
     doppler_spread_ms: mean(s.doppler_spread_ms),
@@ -237,7 +287,7 @@ export function summarize(s) {
   };
 }
 
-export function extract(cube, shape) {
-  const series = frameSeries(cube, shape);
+export function extract(cube, shape, { chirpRepS = CHIRP_REP_S } = {}) {
+  const series = frameSeries(cube, shape, chirpRepS);
   return { summary: summarize(series), series };
 }

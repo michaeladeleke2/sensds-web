@@ -1,7 +1,11 @@
 // The Analysis tab of SensDSv2 (ui/analysis_tab.py) with its two sub-tabs:
 //   Physical Features (ui/features_tab.py): distance and speed per sample,
 //     scatterplot with any two features, click a point for its spectrogram,
-//     CSV export for CODAP.
+//     CSV export for CODAP. Team feedback: the selected sample is drawn from
+//     its raw recording by the Visualize tab's own plots, micro-Doppler and
+//     range map (following the range map's MTI and distance settings), rather
+//     than the training PNG saved at capture time; and velocity span is one
+//     of the features.
 //   PCA Comparison (ui/pca_tab.py): Doppler-domain against range-domain
 //     features, each projected to 2D, scored with the silhouette coefficient.
 // Both read every sample_*_raw.npy in the data folder; extraction runs in a
@@ -12,6 +16,16 @@ import { SUMMARY_FEATURES, SUMMARY_KEYS, FRAME_S, featureLabel } from '../analys
 import { summaryCsv, framesCsv, pyG } from '../analysis/csv.js';
 import { ScatterPlot, zoomButtons, classColors } from '../viz/scatter.js';
 import { currentFolder, setCurrentFolder, onFolderChange, chooseFolder, ensureWritable, canRead, canChooseFolder } from '../io/folder.js';
+import { LiveSpectrogramPlot } from '../viz/live_plot.js';
+import { RangeMapPlot } from '../viz/range_plot.js';
+import { currentJetVmin, onReduceNoiseChange, getRangeSettings, onRangeSettingsChange, rangeMode } from './settings.js';
+
+const REF_MAX_SPEED_M_S = 4.112380411522634;
+// Figures are drawn at a fixed size and shown scaled, so they look the same
+// whatever room the panel has: the spectrogram at the Visualize tab's
+// "Wide 6.4 x 4.8 in", the range map at the same width.
+const FIG = { doppler: [640, 480], range: [640, 360] };
+const FIG_LARGE = { doppler: [1000, 750], range: [1000, 560] };
 
 const MIN_CLASSES = 2, MIN_SAMPLES = 6;
 const $ = id => document.getElementById(id);
@@ -40,7 +54,7 @@ async function pickFolder() {
 }
 
 // ══════════════ Physical Features ══════════════
-const feat = { samples: [], records: [], selected: null, worker: null, imgUrl: null };
+const feat = { samples: [], records: [], selected: null, worker: null, preview: null, previewFor: null, previewWorker: null, previewId: 0 };
 let featPlot;
 
 function featStatus(cls, text) { const el = $('featStatus'); el.className = cls; el.textContent = text; }
@@ -67,7 +81,7 @@ async function featRefresh(ask = false) {
 async function featStart() {
   $('extractBtn').disabled = true; $('featRefreshBtn').disabled = true;
   const prog = $('featProgress'); prog.max = feat.samples.length; prog.value = 0; prog.hidden = false;
-  const items = await Promise.all(feat.samples.map(async s => ({ file: await s.file.getFile(), student: s.student, gesture: s.gesture, name: s.name })));
+  const items = await Promise.all(feat.samples.map(async s => ({ file: await s.file.getFile(), student: s.student, gesture: s.gesture, name: s.name, chirpRepS: s.chirpRepS })));
   feat.worker = newWorker();
   feat.worker.onmessage = ({ data }) => {
     if (data.type === 'progress') { prog.value = data.i; $('featMsg').textContent = `Extracting ${data.i}/${data.total}: ${data.name}`; }
@@ -111,6 +125,7 @@ function pointTip(p) {
 
 function clearSelection() {
   feat.selected = null;
+  feat.preview = null; feat.previewFor = null; feat.previewId++;
   featPlot.select(null);
   $('detailBody').hidden = true; $('detailHint').hidden = false;
 }
@@ -118,12 +133,7 @@ function clearSelection() {
 async function showRecord(r) {
   feat.selected = r;
   $('detailHint').hidden = true; $('detailBody').hidden = false;
-  const img = $('detailImg'), noImg = $('detailNoImg');
-  if (feat.imgUrl) { URL.revokeObjectURL(feat.imgUrl); feat.imgUrl = null; }
-  if (r.png) {
-    try { feat.imgUrl = URL.createObjectURL(await r.png.getFile()); img.src = feat.imgUrl; img.hidden = false; noImg.hidden = true; }
-    catch { img.hidden = true; noImg.hidden = false; }
-  } else { img.hidden = true; noImg.hidden = false; }
+  if (feat.previewFor !== r) requestPreview(r);
   const n = r.series.time_s.length;
   $('detailGesture').textContent = r.gesture;
   $('detailStudent').textContent = r.student;
@@ -137,6 +147,69 @@ async function showRecord(r) {
     row.classList.toggle('on-axis', key === xk || key === yk);
   }
   featPlot.select(r);
+}
+
+// ── the selected sample, as the Visualize tab draws it ──
+// A canvas drawn as if it were w x h CSS pixels; CSS then scales it to fit.
+function fixedFigure(canvas, w, h) {
+  canvas.getBoundingClientRect = () => ({ width: w, height: h, left: 0, top: 0, right: w, bottom: h, x: 0, y: 0 });
+  canvas.style.aspectRatio = `${w} / ${h}`;
+  return canvas;
+}
+
+function drawFigure(kind, canvas, size, p = feat.preview) {
+  fixedFigure(canvas, ...size);
+  if (kind === 'doppler') {
+    new LiveSpectrogramPlot(canvas, { historyLength: p.nFrame, maxSpeed: REF_MAX_SPEED_M_S, jetVmin: currentJetVmin(), title: 'Doppler Spectrogram' })
+      .draw(p.doppler, p.nFrame, p.dopplerBins);
+  } else {
+    const { min, max } = getRangeSettings();
+    new RangeMapPlot(canvas, { layout: 'recording', jetVmin: currentJetVmin(), title: p.mode === 'mti' ? 'Range map (moving)' : 'Range map (raw)', distance: { min, max } })
+      .draw({ rows: p.rangeMap, nFilled: p.nFrame, nBins: p.nBins, rangeM: p.rangeM, durationS: p.nFrame * FRAME_S });
+  }
+}
+
+function drawPreviews(kinds = ['doppler', 'range']) {
+  if (!feat.preview) return;
+  for (const kind of kinds) {
+    const id = kind === 'doppler' ? 'detailDoppler' : 'detailRange';
+    drawFigure(kind, $(id), FIG[kind]);
+    $(`${id}Msg`).textContent = '';
+  }
+}
+
+async function requestPreview(r) {
+  feat.previewFor = r;
+  feat.preview = null;
+  const id = ++feat.previewId;
+  for (const k of ['detailDoppler', 'detailRange']) {
+    fixedFigure($(k), ...FIG[k === 'detailDoppler' ? 'doppler' : 'range']);
+    $(k).getContext('2d').clearRect(0, 0, $(k).width, $(k).height);
+    $(`${k}Msg`).textContent = 'Drawing…';
+  }
+  feat.previewWorker ??= newWorker();
+  feat.previewWorker.onmessage = ({ data }) => {
+    if (data.id !== feat.previewId) return;
+    if (data.type === 'preview-error') {
+      for (const k of ['detailDopplerMsg', 'detailRangeMsg']) $(k).textContent = `Could not draw this recording: ${data.message}`;
+      return;
+    }
+    feat.preview = data;
+    drawPreviews();
+  };
+  try {
+    feat.previewWorker.postMessage({ type: 'preview', id, file: await r.file.getFile(), mode: rangeMode() });
+  } catch (e) {
+    for (const k of ['detailDopplerMsg', 'detailRangeMsg']) $(k).textContent = `Could not read this recording: ${e.message}`;
+  }
+}
+
+function openFigure(kind) {
+  if (!feat.preview) return;
+  const dlg = $('figDialog');
+  $('figDialogTitle').textContent = `${kind === 'doppler' ? 'Micro-Doppler' : 'Range map'}  ·  ${feat.selected?.name ?? ''}`;
+  dlg.showModal();
+  drawFigure(kind, $('figDialogCanvas'), FIG_LARGE[kind]);
 }
 
 async function exportCsv(kind) {
@@ -278,6 +351,8 @@ export function initAnalysis() {
     'The radar measures motion toward and away from itself. Sideways movement barely registers, which is why a swipe looks slow here.',
     'Distance against speed separates the gestures better than two distance features or two speed features.',
     'Click a point to see the spectrogram it came from. A point sitting far from the rest of its group is usually a recording that went wrong, and the picture will show you how.',
+    "Velocity span is how wide a range of velocities the gesture's micro-Doppler covers: its highest velocity minus its lowest. A push-and-pull swings from toward to away, so its span is wide; a hand held still has none.",
+    'Mean speed and velocity span are different: mean speed averages how fast your distance from the radar changed, velocity span measures how spread out the micro-Doppler is.',
   ]);
   hintCard($('pcaHint'), [
     'PCA finds the directions your data varies in most, then keeps the top two so it can be drawn on a flat plot.',
@@ -287,6 +362,20 @@ export function initAnalysis() {
   ]);
 
   for (const k of ['features', 'pca']) $(`subtab-${k}`).onclick = () => selectSub(k);
+
+  for (const [id, kind] of [['detailDoppler', 'doppler'], ['detailRange', 'range']]) {
+    $(id).onclick = () => openFigure(kind);
+    $(id).onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFigure(kind); } };
+  }
+  $('figDialogClose').onclick = () => $('figDialog').close();
+  $('figDialog').addEventListener('click', e => { if (e.target === $('figDialog')) $('figDialog').close(); });
+  // The range map follows the Visualize tab's MTI and distance settings
+  onRangeSettingsChange((_, changed) => {
+    if (!feat.selected) return;
+    if (changed.mti) requestPreview(feat.selected);
+    else drawPreviews(['range']);
+  });
+  onReduceNoiseChange(() => drawPreviews());
   onFolderChange(() => { featRefresh().catch(() => {}); pcaRefresh().catch(() => {}); });
   selectSub('features');
 }

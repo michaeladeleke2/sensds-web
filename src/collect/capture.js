@@ -2,6 +2,7 @@
 // the Infineon SDK method.
 
 import { roundHalfEven } from '../dsp/doppler_live.js';
+import { CHIRP_REP_S } from '../analysis/physical_features.js';
 
 export const GESTURES = ['push', 'swipe_left', 'swipe_right', 'swipe_up', 'swipe_down', 'idle'];
 export const DEFAULTS = { numSamples: 10, duration: 3.0, delay: 3 };
@@ -37,13 +38,16 @@ export const timestamp = (d = new Date()) =>
 
 // write_capture_info for the Infineon method: json.dump(info, f, indent=2).
 // Python writes floats with a decimal point (-20.0), so jet_vmin is formatted by hand.
-export function captureInfoJson(jetVmin, when = new Date()) {
+// chirp_repetition_time_s is the radar's chirp spacing, so the Analysis tab
+// reads the raw samples' Doppler velocities on the right scale.
+export function captureInfoJson(jetVmin, when = new Date(), chirpRepS = CHIRP_REP_S) {
   const f = v => (Number.isInteger(v) ? v.toFixed(1) : String(v));
   return '{\n' +
     '  "spectrogram_method": "infineon",\n' +
     '  "renderer": "reference",\n' +
     '  "velocity_flipped": true,\n' +
     `  "updated": "${timestamp(when)}",\n` +
+    `  "chirp_repetition_time_s": ${f(chirpRepS)},\n` +
     `  "jet_vmin": ${f(jetVmin)}\n` +
     '}';
 }
