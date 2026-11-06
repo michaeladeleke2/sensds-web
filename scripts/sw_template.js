@@ -41,6 +41,8 @@ self.addEventListener('activate', event => {
 });
 
 const sameOrigin = url => url.origin === self.location.origin;
+// The starter model (assets/models/) keeps its own cache (src/test/starter_model.js):
+// it is too big to download again with every deploy, so it is left alone here
 const cacheable = url => sameOrigin(url) || /(^|\.)cdn\.jsdelivr\.net$|^fonts\.(googleapis|gstatic)\.com$/.test(url.hostname);
 
 self.addEventListener('fetch', event => {
@@ -48,6 +50,7 @@ self.addEventListener('fetch', event => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (!cacheable(url)) return;               // the robot, Hugging Face downloads, ...
+  if (sameOrigin(url) && url.pathname.includes('/assets/models/')) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     if (sameOrigin(url)) {

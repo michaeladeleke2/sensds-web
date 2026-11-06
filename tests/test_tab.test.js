@@ -90,3 +90,60 @@ test('maze: every cell reachable, walls consistent, moves, bumps, win and stars'
   assert.equal(m.starRating, 3);                       // min path 1 + 3 - 2 = 2; 4 <= int(2 * 2.5)
   assert.match(m.applyGesture('push'), /already won/);
 });
+
+// ── team feedback: maze moves for any class, float16 model weights ──
+
+import { MAZE_ACTIONS, defaultMazeAction } from '../src/test/maze.js';
+import { readSafetensors, writeSafetensors } from '../src/io/safetensors.js';
+
+test('maze: every class can be given a move; the defaults keep the desktop gestures', () => {
+  assert.deepEqual(MAZE_ACTIONS.map(([k]) => k), ['forward', 'left', 'right', 'around', 'none']);
+  assert.deepEqual(['idle', 'push', 'swipe_down', 'swipe_left', 'swipe_right', 'swipe_up', 'wave'].map(defaultMazeAction),
+    ['none', 'forward', 'around', 'left', 'right', 'forward', 'none']);
+  const m = new Maze(3, 3, () => 0.5);
+  m.walls = m.walls.map(row => row.map(() => 0));          // no inner walls
+  assert.match(m.applyAction('around', 'swipe_down'), /^Turned around! Now facing West/);
+  assert.match(m.applyAction('around'), /Now facing East/);
+  assert.match(m.applyAction('forward', 'swipe_up'), /^Moved East/);
+  assert.match(m.applyAction('none', 'wave'), /^Wave does nothing in the maze/);
+  assert.equal(m.moves, 3);
+  assert.match(m.applyGesture('swipe_down'), /Turned around/);
+});
+
+test('safetensors: float16 and bfloat16 tensors are read as float32', () => {
+  const vals = [0, 1, -2, 0.5, 65504, 2 ** -14, 2 ** -24, -0];          // smallest normal, smallest subnormal
+  const half = Uint16Array.from([0x0000, 0x3c00, 0xc000, 0x3800, 0x7bff, 0x0400, 0x0001, 0x8000]);
+  const bf = Uint16Array.from([0x0000, 0x3f80, 0xc000, 0x3f00]);
+  const json = JSON.stringify({ a: { dtype: 'F16', shape: [8], data_offsets: [0, 16] }, b: { dtype: 'BF16', shape: [4], data_offsets: [16, 24] } });
+  const head = new TextEncoder().encode(json + ' '.repeat((8 - (json.length % 8)) % 8));
+  const buf = new Uint8Array(8 + head.length + 24);
+  new DataView(buf.buffer).setBigUint64(0, BigInt(head.length), true);
+  buf.set(head, 8);
+  buf.set(new Uint8Array(half.buffer), 8 + head.length);
+  buf.set(new Uint8Array(bf.buffer), 8 + head.length + 16);
+  const { tensors } = readSafetensors(buf.buffer);
+  [...tensors.get('a').data].forEach((v, i) => assert.ok(Object.is(v, vals[i]) || Math.abs(v - vals[i]) <= 1e-12 * Math.abs(vals[i]), `${v} vs ${vals[i]}`));
+  assert.deepEqual([...tensors.get('b').data], [0, 1, -2, 0.5]);
+  const f32 = readSafetensors(writeSafetensors([['w', { shape: [2], data: Float32Array.from([1.5, -3]) }]]).buffer);
+  assert.deepEqual([...f32.tensors.get('w').data], [1.5, -3]);
+});
+
+test('the starter model shipped with the site is complete and matches its manifest', async () => {
+  const { readFileSync, statSync } = await import('node:fs');
+  const { createHash } = await import('node:crypto');
+  const dir = new URL('../assets/models/six_class/', import.meta.url);
+  const man = JSON.parse(readFileSync(new URL('manifest.json', dir)));
+  const config = JSON.parse(readFileSync(new URL('config.json', dir)));
+  assert.deepEqual(Object.values(config.id2label), man.classes);
+  let total = 0;
+  const whole = createHash('sha256');
+  for (const p of man.weights.parts) {
+    const b = readFileSync(new URL(p.file, dir));
+    assert.ok(statSync(new URL(p.file, dir)).size < 50 * 1024 * 1024, `${p.file} under GitHub's 50 MB warning`);
+    assert.equal(b.length, p.bytes);
+    assert.equal(createHash('sha256').update(b).digest('hex'), p.sha256);
+    whole.update(b); total += b.length;
+  }
+  assert.equal(total, man.weights.bytes);
+  assert.equal(whole.digest('hex'), man.weights.sha256);
+});

@@ -1,0 +1,41 @@
+{
+  "name": "Starter model: six gestures",
+  "id": "six_class-c6427c081059",
+  "source": "model_hf_phGAN_doppler_spectrogram_six_class (ViT-Base, trained 2026-08-19), weights stored as float16",
+  "classes": [
+    "idle",
+    "push",
+    "swipe_down",
+    "swipe_left",
+    "swipe_right",
+    "swipe_up"
+  ],
+  "weights": {
+    "file": "model.safetensors",
+    "dtype": "F16",
+    "bytes": 171629620,
+    "sha256": "c6427c0810595fd0fa9a781e78e85bf4dae4836849bb67490292362952543948",
+    "parts": [
+      {
+        "file": "model.safetensors.part00",
+        "bytes": 47185920,
+        "sha256": "f443d134c0f64e2d69953056e5bc721888375a3a0f49a14ebe2a677d5b1f2f42"
+      },
+      {
+        "file": "model.safetensors.part01",
+        "bytes": 47185920,
+        "sha256": "fdf2ef9b27602c4a1d1e8fb192514dde1faedc9f8ebd24e44e1c8e2bed4eb9fa"
+      },
+      {
+        "file": "model.safetensors.part02",
+        "bytes": 47185920,
+        "sha256": "dfedeb1be072c00658b1a8fcd7461a8d97452da334954de6b627991162b32bd3"
+      },
+      {
+        "file": "model.safetensors.part03",
+        "bytes": 30071860,
+        "sha256": "6504fb7bc1579db75774cd223fb9665b627570aac8df0336cd11ba021e7e0627"
+      }
+    ]
+  }
+}

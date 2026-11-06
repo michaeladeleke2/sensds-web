@@ -181,6 +181,10 @@
   .maze-guide { background: #f5eef8; border: 1px solid #c39bd3; border-radius: 8px; padding: 7px 10px; font-size: 12px; color: #5b2c6f; display: flex; flex-direction: column; gap: 2px; }
   .maze-guide span { color: #8e44ad; }
   .maze-guide-title { font-weight: bold; }
+  .maze-moves { display: flex; flex-direction: column; gap: 4px; }
+  .maze-move-row { display: grid; grid-template-columns: 1fr 120px; gap: 6px; align-items: center; }
+  .maze-move-row select { font-size: 12px; padding: 3px 6px; color: #5b2c6f; background: #fff; border: 1px solid #c39bd3; border-radius: 5px; }
+  .maze-moves-note { font-size: 11px; color: #8e44ad; margin-top: 2px; }
   .diff-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
   .diff-btn { height: 44px; font-size: 11px; background: #f5eef8; color: #5b2c6f; border: 1px solid #c39bd3; border-radius: 6px; line-height: 1.2; }
   .diff-btn.active { background: #8e44ad; color: #fff; border: none; font-weight: bold; }
@@ -869,9 +873,10 @@ Both are reduced to 2D with PCA. The one whose classes form tighter, more separa
 <div id="testPane" class="pane" role="tabpanel" hidden>
   <div class="side test-side">
     <div class="test-heading">Test Gestures</div>
-    <div class="test-subtitle">Load your model, then pick a game mode!</div>
+    <div class="test-subtitle">Start with the six-gesture starter model, or load your own, then pick a game mode!</div>
     <hr>
     <button id="loadModelBtn" class="load-model-btn" title="Pick a trained model folder (models/&lt;name&gt;_vN in your data folder).">📂  Load Model</button>
+    <button id="starterModelBtn" class="minor-btn" title="The six-gesture model that comes with SensDS: idle, push, swipe down, swipe left, swipe right, swipe up.&#10;About 170 MB, downloaded the first time, then kept for offline use.">⭐  Use Starter Model (6 gestures)</button>
     <div id="modelLbl" class="model-lbl">No model loaded.</div>
     <div id="classesFrame" class="classes-frame" hidden><div id="classesTitle" class="classes-title">Classes</div><div id="classesLbl" class="classes-lbl"></div></div>
     <hr>
@@ -896,10 +901,13 @@ Both are reduced to 2D with PCA. The one whose classes form tighter, more separa
     <div id="ctlMaze" class="mode-controls" hidden>
       <div class="maze-guide">
         <div class="maze-guide-title">Gesture Controls</div>
-        <div>👈 Swipe Left <span>→ Turn left</span></div>
-        <div>👉 Swipe Right <span>→ Turn right</span></div>
-        <div>👋 Push <span>→ Move forward</span></div>
-        <div>🤚 Idle <span>→ Wait / skip</span></div>
+        <div id="mazeMoves" class="maze-moves">
+          <div>👈 Swipe Left <span>→ Turn left</span></div>
+          <div>👉 Swipe Right <span>→ Turn right</span></div>
+          <div>👋 Push <span>→ Move forward</span></div>
+          <div>🤚 Idle <span>→ Wait / skip</span></div>
+        </div>
+        <div class="maze-moves-note" id="mazeMovesNote">Load a model to choose what each of its gestures does.</div>
       </div>
       <div class="test-field-label">Difficulty</div>
       <div class="diff-row">

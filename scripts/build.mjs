@@ -3,7 +3,7 @@
 //
 //   npm run build
 
-import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync, existsSync, copyFileSync } from 'node:fs';
 import { dirname, join, normalize, relative } from 'node:path';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -20,7 +20,8 @@ function imports(file) {
   const stat = [...text.matchAll(/(?:\bfrom\s*|^\s*import\s+)['"](\.{1,2}\/[^'"]+)['"]/gm)].map(m => rel(m[1]));
   const dyn = [...text.matchAll(/\bimport\s*\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*\)/g)].map(m => rel(m[1]));
   // Workers: new URL('./worker.js', import.meta.url)
-  for (const m of text.matchAll(/new\s+URL\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*,\s*import\.meta\.url\s*\)/g)) dyn.push(rel(m[1]));
+  // (a folder, such as the starter model's, is published separately below)
+  for (const m of text.matchAll(/new\s+URL\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*,\s*import\.meta\.url\s*\)/g)) if (!m[1].endsWith('/')) dyn.push(rel(m[1]));
   return { stat, dyn };
 }
 
@@ -51,6 +52,11 @@ const main = staticClosure(entries);
 const files = new Set([...PAGES, 'assets/logo-mark.png', 'assets/favicon.png', ...main.seen]);
 for (const d of new Set(main.dynamic)) for (const f of staticClosure([d]).seen) files.add(f);
 const strata = [...files].filter(isStrata);
+// The starter model (src/test/starter_model.js fetches it by name): published,
+// but not put in the offline cache's install list; it keeps its own cache
+const modelFiles = [];
+const walk = dir => { for (const e of readdirSync(join(root, dir), { withFileTypes: true })) { const p = join(dir, e.name); if (e.isDirectory()) walk(p); else modelFiles.push(p); } };
+if (existsSync(join(root, 'assets', 'models'))) walk(join('assets', 'models'));
 
 // Version tag on every script URL (index.html, imports, workers). A browser then
 // caches one complete set of files per deploy and never mixes a new page with
@@ -73,6 +79,11 @@ for (const f of [...files].sort()) {
   writeFileSync(join(out, f), isText ? versioned(f, readFileSync(join(root, f), 'utf8')) : readFileSync(join(root, f)));
   console.log('  ' + relative(root, join(out, f)));
 }
+for (const f of modelFiles) {
+  mkdirSync(dirname(join(out, f)), { recursive: true });
+  copyFileSync(join(root, f), join(out, f));
+}
+console.log(`  ${modelFiles.length} starter model files in assets/models/ (not in the offline install list)`);
 // Offline cache (service worker): every published file, scripts under the
 // version-tagged URL the pages request, plus the TensorFlow.js CDN modules
 const tagged = [...files].sort().map(f => (f.endsWith('.js') ? tag(f) : f === 'index.html' ? './' : f.endsWith('/index.html') ? f.slice(0, -'index.html'.length) : f));

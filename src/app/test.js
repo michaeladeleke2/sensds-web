@@ -7,11 +7,17 @@
 //                  swipes turn, a push moves forward.
 // Timings, thresholds, cooldowns, the prediction cache and every message are
 // the desktop's. Inference runs in a Web Worker (src/test/worker.js).
+// Team feedback: the six-gesture starter model (src/test/starter_model.js) is
+// the default: it loads when the tab is first opened and no model has been
+// chosen, and Load Model still picks a student's own. Each class of the loaded
+// model can be given a maze move (Turn left, Turn right, Move forward, Turn
+// around, Do nothing), remembered in this browser for that set of classes.
 
 import { subscribeFrames } from './radar_session.js';
 import { currentJetVmin } from './settings.js';
 import { recordPrediction, announceModel, gameEvent } from './predictions.js';
-import { Maze } from '../test/maze.js';
+import { Maze, MAZE_ACTIONS, defaultMazeAction } from '../test/maze.js';
+import { loadStarterModel } from '../test/starter_model.js';
 import { canChooseFolder } from '../io/folder.js';
 import { chooseModelFolder } from './model_folder.js';
 
@@ -47,6 +53,7 @@ const st = {
   animTimer: null, animSteps: 0, animStepPx: 0,
   pending: { gesture: '', conf: 0, threshold: 0 },
   probs: {},
+  loading: false, starterTried: false, mazeMoves: {}, loadToken: 0,
 };
 const minInferGapMs = () => (st.backend === 'webgpu' || st.backend === 'webgl' ? 300 : 1500);   // min_infer_gap_s
 
@@ -260,11 +267,31 @@ async function loadModel() {
   try {
     const { name, files } = await picked.read();
     modelName = name;
+    st.loading = true; st.loadToken += 1;            // a starter download still running is dropped
     ensureWorker().postMessage({ type: 'load', files }, [files.weights]);
   } catch (e) { onModelLoadError(e.message); }
 }
 
+// The six-gesture starter model that comes with the site
+async function loadStarter() {
+  if (st.loading) return;
+  st.loading = true; st.starterTried = true;
+  const token = ++st.loadToken;
+  $('starterModelBtn').disabled = true;
+  setStatus('Loading the starter model…', '#e67e22');
+  $('modelLbl').textContent = 'Starter model: loading…'; $('modelLbl').className = 'model-lbl busy';
+  enableStarts(false);
+  try {
+    const { name, files } = await loadStarterModel(text => { if (token === st.loadToken) $('modelLbl').textContent = text; });
+    if (token !== st.loadToken) return;              // the student picked their own model meanwhile
+    modelName = name;
+    $('modelLbl').textContent = 'Starter model: getting it ready…';
+    ensureWorker().postMessage({ type: 'load', files }, [files.weights]);
+  } catch (e) { if (token === st.loadToken) onModelLoadError(e.message); }
+}
+
 function onModelLoaded({ classes, backend }) {
+  st.loading = false; $('starterModelBtn').disabled = false;
   st.modelReady = true; st.classes = classes; st.backend = backend;
   $('modelLbl').textContent = `✓  ${modelName}`; $('modelLbl').className = 'model-lbl ok';
   $('classesLbl').textContent = classes.join('  ·  ');
@@ -274,11 +301,13 @@ function onModelLoaded({ classes, backend }) {
   setStatus(`✅ Loaded: ${classes.length} classes ready!`, '#27ae60');
   fieldReset();
   rebuildConfirmButtons(classes);
+  renderMazeMoves(classes);
   $('confirmBox').hidden = true;
   announceModel(modelName, classes);                 // model_loaded -> Results tab
 }
 
 function onModelLoadError(msg) {
+  st.loading = false; $('starterModelBtn').disabled = false;
   st.modelReady = false;
   $('modelLbl').textContent = `✗  ${msg}`; $('modelLbl').className = 'model-lbl err';
   $('classesFrame').hidden = true;
@@ -287,6 +316,35 @@ function onModelLoadError(msg) {
 }
 
 function enableStarts(on) { for (const id of ['captureBtn', 'rsStartBtn', 'mazeStartBtn']) $(id).disabled = !on; }
+
+// ══════════════ maze moves ══════════════
+const MOVE_ICONS = { idle: '🤚', push: '👋', swipe_left: '👈', swipe_right: '👉', swipe_up: '👆', swipe_down: '👇' };
+const movesKey = classes => `sensds-maze-moves:${classes.join(',')}`;
+function renderMazeMoves(classes) {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(movesKey(classes)) || '{}'); } catch { /* defaults */ }
+  const valid = new Set(MAZE_ACTIONS.map(([k]) => k));
+  st.mazeMoves = Object.fromEntries(classes.map(c => [c, valid.has(saved[c]) ? saved[c] : defaultMazeAction(c)]));
+  const box = $('mazeMoves');
+  box.replaceChildren();
+  for (const c of classes) {
+    const row = document.createElement('label');
+    row.className = 'maze-move-row';
+    const name = document.createElement('span');
+    name.textContent = `${MOVE_ICONS[c] ?? '•'} ${nice(c)}`;
+    const sel = document.createElement('select');
+    sel.setAttribute('aria-label', `Maze move for ${nice(c)}`);
+    for (const [k, label] of MAZE_ACTIONS) sel.append(new Option(label, k));
+    sel.value = st.mazeMoves[c];
+    sel.onchange = () => {
+      st.mazeMoves[c] = sel.value;
+      try { localStorage.setItem(movesKey(classes), JSON.stringify(st.mazeMoves)); } catch { /* this visit only */ }
+    };
+    row.append(name, sel);
+    box.append(row);
+  }
+  $('mazeMovesNote').textContent = 'Choose what each gesture does in the maze.';
+}
 
 // ══════════════ confirm ══════════════
 function rebuildConfirmButtons(classes) {
@@ -499,13 +557,14 @@ function onInferenceResult(probs, mode, fromCache, image) {
     }
   } else if (mode === 'maze') {
     const mazeThreshold = Number($('mazeThreshold').value);
-    if (conf < mazeThreshold || best === 'idle') {
+    const move = st.mazeMoves[best] ?? defaultMazeAction(best);
+    if (conf < mazeThreshold || move === 'none') {
       recordPrediction(best, conf, mazeThreshold, null, 'Maze');
-      setStatus(`Listening… (${n} ${pct0(conf)})`, '#888');
+      setStatus(`Listening… (${n} ${pct0(conf)}${conf >= mazeThreshold ? ': no move set' : ''})`, '#888');
     } else {
       recordPrediction(best, conf, mazeThreshold, best, 'Maze');
       const wasWon = maze.won;
-      const feedback = maze.applyGesture(best);
+      const feedback = maze.applyAction(move, best);
       if (maze.bump) { clearTimeout(bumpTimer); bumpTimer = setTimeout(() => { maze.bump = false; drawMaze(); }, 300); }
       if (maze.won && !wasWon) onMazeWon();          // MazeWidget.won fires inside apply_gesture
       updateFacing(); drawMaze();
@@ -524,6 +583,7 @@ function onInferenceError(msg, mode) {
 // ══════════════ wiring ══════════════
 export function initTest() {
   $('loadModelBtn').onclick = loadModel;
+  $('starterModelBtn').onclick = loadStarter;
   $('modeSingle').onclick = () => setMode(MODE_SINGLE);
   $('modeRs').onclick = () => setMode(MODE_RS);
   $('modeMaze').onclick = () => setMode(MODE_MAZE);
@@ -551,4 +611,8 @@ export function hideTest() {
   if (st.mazeTimer) stopMaze();
   st.capturing = false;
 }
-export function showTest() { requestAnimationFrame(() => { drawField(); drawMaze(); drawBars(); }); }
+// The starter model is the default: opening the tab with no model loads it
+export function showTest() {
+  requestAnimationFrame(() => { drawField(); drawMaze(); drawBars(); });
+  if (!st.modelReady && !st.loading && !st.starterTried) loadStarter();
+}
