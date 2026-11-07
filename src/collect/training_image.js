@@ -10,11 +10,12 @@ import { resizeBilinear } from '../io/resize.js';
 export const TRAINING_SIZE = [400, 300];
 
 // spectrogram: Float64Array (nFrame x bins). Returns RGB bytes (bins x nFrame x 3).
-export function referenceRgb(spectrogram, nFrame, bins, jetVmin) {
+// clim gives the colour limits (the previous rule can be passed in).
+export function referenceRgb(spectrogram, nFrame, bins, jetVmin, clim = jetClim) {
   const plot = new Float64Array(bins * nFrame);
   for (let f = 0; f < nFrame; f++)
     for (let b = 0; b < bins; b++) plot[b * nFrame + f] = spectrogram[f * bins + b];
-  const { vmin, vmax } = jetClim(plot, jetVmin);
+  const { vmin, vmax } = clim(plot, jetVmin);
   const rgb = new Uint8Array(bins * nFrame * 3);
   for (let i = 0; i < plot.length; i++) {
     let v;
@@ -26,8 +27,8 @@ export function referenceRgb(spectrogram, nFrame, bins, jetVmin) {
   return rgb;
 }
 
-export function trainingImage(spectrogram, nFrame, bins, jetVmin) {
-  const rgb = referenceRgb(spectrogram, nFrame, bins, jetVmin);
+export function trainingImage(spectrogram, nFrame, bins, jetVmin, clim = jetClim) {
+  const rgb = referenceRgb(spectrogram, nFrame, bins, jetVmin, clim);
   const [w, h] = TRAINING_SIZE;
   return { rgb: resizeBilinear(rgb, nFrame, bins, w, h), width: w, height: h };
 }

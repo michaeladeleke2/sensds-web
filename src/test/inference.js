@@ -16,15 +16,19 @@ import { trainingImage } from '../collect/training_image.js';
 import { resizeBilinear } from '../io/resize.js';
 import { readSafetensors } from '../io/safetensors.js';
 import { configFromHf, loadParams, forward } from '../train/vit.js';
+import { previousImage } from './previous_picture.js';
 
 export const EPOCH_FRAMES = 30;          // core.processing.EPOCH_FRAMES
 export const MIN_FRAMES = 10;
 
 // _frames_to_pil: frames are antenna-0 arrays (nChirp x nSample). Returns the
 // training image { rgb, width, height } or null when there are too few frames.
-export function framesToImage(frames, nChirp, nSample, jetVmin) {
+// picture 'previous' draws it as SensDS did before the change note, for the
+// starter model (src/test/previous_picture.js).
+export function framesToImage(frames, nChirp, nSample, jetVmin, picture = 'current') {
   if (frames.length < MIN_FRAMES) return null;
   const epoch = frames.slice(-EPOCH_FRAMES);
+  if (picture === 'previous') return previousImage(epoch, nChirp, nSample);
   const { spectrogram, dopplerBins } = computeRecorded(epoch, nChirp, nSample);
   return trainingImage(spectrogram, epoch.length, dopplerBins, jetVmin);
 }

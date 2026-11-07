@@ -147,3 +147,40 @@ test('the starter model shipped with the site is complete and matches its manife
   assert.equal(total, man.weights.bytes);
   assert.equal(whole.digest('hex'), man.weights.sha256);
 });
+
+// ── previous spectrogram (starter model) ──
+import { previousImage, toPreviousSpeedRange, speedRatio } from '../src/test/previous_picture.js';
+import { computeRecorded } from '../src/dsp/recorded.js';
+import { selectRangeBinRawPrevious } from '../src/dsp/doppler_live.js';
+
+const prevFix = name => readFileSync(new URL(`previous/${name}`, FIX));
+
+test('previous spectrogram: same range bins and colours as SensDS before the change note', () => {
+  // Fixtures made by SensDSv2 before the change note (commit 6642a2e^), from the same synthetic capture
+  const frames = Array.from({ length: 20 }, (_, f) => sdkScale(syntheticRaw(f)));
+  const b = prevFix('spectrogram_20x512.f64'), ref = new Float64Array(b.buffer, b.byteOffset, b.byteLength / 8);
+  const { spectrogram } = computeRecorded(frames, 128, 256, selectRangeBinRawPrevious);
+  let d = 0;
+  for (let i = 0; i < ref.length; i++) d = Math.max(d, Math.abs(spectrogram[i] - ref[i]));
+  assert.ok(d < 1e-8, `max |dB difference| ${d}`);
+  // With the previous chirp (no stretch) the picture is byte for byte the previous training image
+  const img = previousImage(frames, 128, 256, 1);
+  assert.deepEqual(img.rgb, new Uint8Array(prevFix('training_20.u8')));
+});
+
+test('previous spectrogram: the 0.3 ms chirp is stretched onto the 0.2 ms speed range', () => {
+  assert.equal(speedRatio(0.0003), 1.5);
+  assert.equal(speedRatio(0.0002), 1);
+  const D = 8, row = Float64Array.of(-80, -70, -60, -50, 0, -50, -60, -70);   // zero speed at bin 4
+  const out = toPreviousSpeedRange(row, 1, D, 1.5);
+  // bin k reads current bin 4 + (k - 4) * 1.5 (bin 3 -> 2.5, between -60 and -50);
+  // past the ends (bins 0, 1 and 7), the column's median (-60)
+  assert.deepEqual([...out], [-60, -60, -70, -55, 0, -55, -70, -60]);
+});
+
+test('framesToImage draws the previous way only when asked', () => {
+  const frames = Array.from({ length: 20 }, (_, f) => sdkScale(syntheticRaw(f)));
+  const cur = framesToImage(frames, 128, 256, -50), prev = framesToImage(frames, 128, 256, -50, 'previous');
+  assert.deepEqual(prev.rgb, previousImage(frames, 128, 256).rgb);
+  assert.notDeepEqual(prev.rgb, cur.rgb);
+});

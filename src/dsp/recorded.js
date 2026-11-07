@@ -37,7 +37,8 @@ export function smoothRangeBins(rawBins, nRangeBins, window = SMOOTH_WINDOW) {
 
 // frames: array of antenna-0 frames, each (nChirp x nSample) row major.
 // Returns { spectrogram: Float64Array (nFrame x dopplerBins), rangeBins, dopplerBins }.
-export function computeRecorded(frames, nChirp, nSample) {
+// selectBin picks each frame's range bin (the previous rule can be passed in).
+export function computeRecorded(frames, nChirp, nSample, selectBin = selectRangeBinRaw) {
   const rdm = new RdmComputer(nSample, nChirp);
   const D = rdm.dopplerFftSize, R = rdm.nRangeBins, n = frames.length;
   const w = Math.max(1, SMOOTH_WINDOW | 1), h = Math.floor(w / 2);
@@ -56,7 +57,7 @@ export function computeRecorded(frames, nChirp, nSample) {
   };
   for (let i = 0; i < n; i++) {
     const db = rdm.compute(frames[i]);
-    raw[i] = selectRangeBinRaw(db, R, D);
+    raw[i] = selectBin(db, R, D);
     recent.set(i, db.slice());
     if (i - h >= 0) keepRows(i - h);
   }

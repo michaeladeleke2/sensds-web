@@ -83,15 +83,17 @@ export class RdmComputer {
 
 // select_range_bin_raw: the range bin, from MIN_RANGE_BIN (10 cm) on, whose
 // loudest Doppler cell is the loudest (first max wins).
-// Previous version (argmax over range of the dB sum over Doppler):
-// export function selectRangeBinRaw(rdmDb, nRangeBins, dopplerFftSize) {
-//   let best = -Infinity, bestIdx = 0;
-//   for (let r = 0; r < nRangeBins; r++) {
-//     const s = pairwiseSum(rdmDb, r * dopplerFftSize, dopplerFftSize);
-//     if (s > best) { best = s; bestIdx = r; }
-//   }
-//   return bestIdx;
-// }
+// Previous version, before the change note (argmax over range of the dB sum
+// over Doppler); kept for the starter model, whose training pictures were
+// drawn with it (src/test/previous_picture.js):
+export function selectRangeBinRawPrevious(rdmDb, nRangeBins, dopplerFftSize) {
+  let best = -Infinity, bestIdx = 0;
+  for (let r = 0; r < nRangeBins; r++) {
+    const s = pairwiseSum(rdmDb, r * dopplerFftSize, dopplerFftSize);
+    if (s > best) { best = s; bestIdx = r; }
+  }
+  return bestIdx;
+}
 export const MIN_RANGE_BIN = 15;
 export function selectRangeBinRaw(rdmDb, nRangeBins, dopplerFftSize, minBin = MIN_RANGE_BIN) {
   const start = Math.min(nRangeBins - 1, Math.max(0, minBin));

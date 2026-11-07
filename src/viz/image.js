@@ -12,13 +12,15 @@ import { JET_LUT, JET_LUT_BYTES, lutIndex } from './jet.js';
 
 // _jet_clim: the floor is fixed at jetVmin; the top is the loudest cell, or
 // -10 dB when that is at or below the floor.
-// Previous version:
-// export function jetClim(data, jetVmin) {
-//   let vmax = -Infinity;
-//   for (let i = 0; i < data.length; i++) if (data[i] > vmax) vmax = data[i];   // nanmax (no NaNs here)
-//   const vmin = jetVmin < vmax ? jetVmin : vmax - 40.0;
-//   return { vmin, vmax };
-// }
+// Previous version, before the change note (the floor is jetVmin, or 40 dB
+// below the loudest cell when nothing reaches it); kept for the starter model
+// (src/test/previous_picture.js):
+export function jetClimPrevious(data, jetVmin) {
+  let vmax = -Infinity;
+  for (let i = 0; i < data.length; i++) if (data[i] > vmax) vmax = data[i];   // nanmax (no NaNs here)
+  const vmin = jetVmin < vmax ? jetVmin : vmax - 40.0;
+  return { vmin, vmax };
+}
 export function jetClim(data, jetVmin) {
   let vmax = -Infinity;
   for (let i = 0; i < data.length; i++) if (data[i] > vmax) vmax = data[i];

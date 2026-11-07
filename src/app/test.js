@@ -12,6 +12,9 @@
 // chosen, and Load Model still picks a student's own. Each class of the loaded
 // model can be given a maze move (Turn left, Turn right, Move forward, Turn
 // around, Do nothing), remembered in this browser for that set of classes.
+// The starter model was trained on spectrograms drawn before the change note,
+// so it is shown that drawing ("Previous spectrogram", on for the starter
+// model, off for a student's own; src/test/previous_picture.js).
 
 import { subscribeFrames } from './radar_session.js';
 import { currentJetVmin } from './settings.js';
@@ -268,6 +271,7 @@ async function loadModel() {
     const { name, files } = await picked.read();
     modelName = name;
     st.loading = true; st.loadToken += 1;            // a starter download still running is dropped
+    $('previousPicture').checked = false;            // a student's model learned the current drawing
     ensureWorker().postMessage({ type: 'load', files }, [files.weights]);
   } catch (e) { onModelLoadError(e.message); }
 }
@@ -285,6 +289,7 @@ async function loadStarter() {
     const { name, files } = await loadStarterModel(text => { if (token === st.loadToken) $('modelLbl').textContent = text; });
     if (token !== st.loadToken) return;              // the student picked their own model meanwhile
     modelName = name;
+    $('previousPicture').checked = true;             // the starter model learned the previous drawing
     $('modelLbl').textContent = 'Starter model: getting it ready…';
     ensureWorker().postMessage({ type: 'load', files }, [files.weights]);
   } catch (e) { if (token === st.loadToken) onModelLoadError(e.message); }
@@ -505,7 +510,8 @@ function runInference(frames, mode) {
     return;
   }
   st.inferenceRunning = true; st.pendingMode = mode;
-  st.worker.postMessage({ type: 'predict', id: ++st.reqId, frames, nChirp: N_CHIRP, nSample: N_SAMPLE, jetVmin: currentJetVmin() });
+  const picture = $('previousPicture').checked ? 'previous' : 'current';
+  st.worker.postMessage({ type: 'predict', id: ++st.reqId, frames, nChirp: N_CHIRP, nSample: N_SAMPLE, jetVmin: currentJetVmin(), picture });
 }
 
 function showPreview(image) {
