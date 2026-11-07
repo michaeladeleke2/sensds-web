@@ -17,7 +17,7 @@ Chrome or Edge on a computer, with the radar connected.
    if saved as `model.safetensors` (the default since transformers 4.35).
 3. The classes appear under the model name.
 4. Pick a mode:
-   - **Try a Gesture**: set the capture duration (3 s is what the model was trained on), click
+   - **Try a Gesture**: set the capture duration (the same as the Collect samples, 3 s by default), click
      **Capture & Predict**, do the gesture. The prediction, its confidence and every class's bar
      appear; the robot moves; answer "What gesture did you actually perform?".
    - **RoboSoccer**: set the confidence threshold (0.6), click **Start RoboSoccer**. The robot drives
@@ -27,16 +27,21 @@ Chrome or Edge on a computer, with the radar connected.
      forward, Turn left, Turn right, Turn around or Do nothing. They start as swipe left / right
      turn, push and swipe up move forward, swipe down turns around, idle does nothing; the browser
      remembers changes for that model's set of gestures. Pick a difficulty, set the minimum
-     confidence (0.55), click **Start Maze**, and reach the star.
+     confidence (0.55), click **Start Maze**, and reach the star. Each move starts with a countdown
+     (3, 2, 1, shown big over the maze and in the bar); at **GO!** do one gesture: the next 20 frames
+     (2 s) are captured, the model reads them, the robot moves, and the next countdown starts.
 5. Leaving the Test tab stops a running game.
 
 ## What matches the desktop
 
-- Model input: last 30 frames (at least 10), reference spectrogram, 400 x 300 training image, the
-  model's own image processor settings, softmax.
+- Model input: reference spectrogram, 400 x 300 training image, the model's own image processor
+  settings, softmax. Changed with the desktop (team feedback): the model sees as many frames as the
+  Collect tab records for a sample (round(duration / 0.15): 20 for "3 s", about 2 s of radar, which
+  is also what the starter model was trained on), where both used to take the last 30.
 - RoboSoccer: a prediction every 20 ticks (33 ms); 4 s cooldown after a gesture, 3 s after idle or
   low confidence; the frame buffer is cleared after each; a confident result (80%+) is reused for
-  2 ticks. Maze: every 45 ticks on the last 50 frames.
+  2 ticks. Maze (changed with the desktop, team feedback): a 3 s countdown, then the next 20 frames
+  from GO!, instead of a check every 45 ticks on whatever the last 3 s held.
 - Minimum gap between predictions: 0.3 s with a GPU, 1.5 s on CPU.
 - The difficulty buttons read 4×5 / 5×7 / 7×9 but build 3×4 / 4×5 / 5×7 mazes; this is the desktop's
   own behaviour and is kept as it is.
@@ -78,7 +83,7 @@ Chrome or Edge on a computer, with the radar connected.
   `core/previous_picture.py` draws the same picture byte for byte). With the previous chirp the
   drawing is byte for byte what SensDS made before the change. The stretch could not yet be checked
   on recordings made with the new chirp.
-- What the model sees: in **Try a Gesture**, the last 3 s of the capture (30 radar frames at 10 per
-  second); in the **Maze**, every 1.5 s, the last 3 s, whether or not a gesture is under way, so a
-  gesture can be split between two checks. A Collect sample of "3 s" is 20 frames, about 2 s of
-  radar (SensDSv2's own frame count).
+- What the model sees: as many frames as a Collect sample of the same duration (20 for "3 s", about
+  2 s of radar; the starter model's training pictures were 20 frames too). **Try a Gesture** captures
+  that many after the click; the **Maze** counts down and captures 20 from GO!, so the whole gesture
+  is in the picture; RoboSoccer reads the last 20.

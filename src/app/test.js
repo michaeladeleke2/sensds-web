@@ -3,8 +3,10 @@
 //                  which gesture was really done,
 //   RoboSoccer     the robot drives on; every 20 ticks the last frames are
 //                  classified; swipes turn 30 deg, a push gives a speed burst,
-//   Maze Game      every 45 ticks the last 50 frames (30 used) are classified;
-//                  swipes turn, a push moves forward.
+//   Maze Game      a countdown (3, 2, 1, GO!), then the next 20 frames are
+//                  captured and classified, and the robot moves; then the
+//                  next countdown (team feedback: the gesture always falls
+//                  inside the picture, instead of a window running on its own).
 // Timings, thresholds, cooldowns, the prediction cache and every message are
 // the desktop's. Inference runs in a Web Worker (src/test/worker.js).
 // Team feedback: the six-gesture starter model (src/test/starter_model.js) is
@@ -12,6 +14,10 @@
 // chosen, and Load Model still picks a student's own. Each class of the loaded
 // model can be given a maze move (Turn left, Turn right, Move forward, Turn
 // around, Do nothing), remembered in this browser for that set of classes.
+// The model is shown 20 frames, as many as a Collect sample of "3 s" holds
+// (numFramesFor), which is also what the starter model was trained on: Try a
+// Gesture takes numFramesFor(duration) frames as Collect does, RoboSoccer and
+// the Maze 20.
 // The starter model was trained on spectrograms drawn before the change note,
 // so it is shown that drawing ("Previous spectrogram", on for the starter
 // model, off for a student's own; src/test/previous_picture.js).
@@ -22,12 +28,14 @@ import { recordPrediction, announceModel, gameEvent } from './predictions.js';
 import { Maze, MAZE_ACTIONS, defaultMazeAction } from '../test/maze.js';
 import { loadStarterModel } from '../test/starter_model.js';
 import { canChooseFolder } from '../io/folder.js';
+import { numFramesFor } from '../collect/capture.js';
 import { chooseModelFolder } from './model_folder.js';
 
 // ── constants (test_tab.py) ──
 const ROBOT_R = 14, BALL_R = 8, TRAIL_MAX = 40, TICK_MS = 33, INFER_EVERY = 20;
 const PRED_CACHE_CONF = 0.8, PRED_CACHE_FRAMES = 2;
-const MAZE_INFER_EVERY = 45, MAZE_MIN_FRAMES = 30, MAZE_CAPTURE_FRAMES = 50;
+const MODEL_FRAMES = numFramesFor(3.0);                // 20 frames, a Collect sample of "3 s"
+const MAZE_COUNTDOWN_S = 3, FRAME_S = 0.1;
 const BASE_SPEED = 2.0, PUSH_BURST = 20, PUSH_BURST_TICKS = 10, SINGLE_PUSH_PX = 40, SINGLE_PUSH_STEPS = 20;
 const DIFFICULTY_SIZES = [[3, 4], [4, 5], [5, 7]];      // Easy, Medium, Hard (as the desktop builds them)
 const MODE_SINGLE = 0, MODE_RS = 1, MODE_MAZE = 2;
@@ -35,7 +43,7 @@ const N_CHIRP = 128, N_SAMPLE = 256;
 const HINTS = [
   '🎯 Single Prediction: do a gesture, hit Capture, and the model tells you what it thinks!',
   '⚽ RoboSoccer mode: the model watches you continuously. Swipe to steer, push to speed up!',
-  '🌀 Maze Game: navigate through the maze using gestures. Swipe to turn, push to move forward!',
+  '🌀 Maze Game: wait for 3, 2, 1, GO! then do one gesture. Swipe to turn, push to move forward!',
   '📊 Confidence: a percentage showing how sure the model is. 90%+ means very confident!',
   '🔧 Confidence threshold: the robot only reacts if the model is at least this confident.',
   '📈 The bar chart shows every gesture\'s score. One tall bar means confident!',
@@ -52,7 +60,7 @@ const st = {
   inferenceRunning: false, lastFrames: null, reqId: 0, pendingMode: null,
   cacheProbs: {}, cacheRemaining: 0, lastInferDone: 0,
   rsTimer: null, rsTick: 0, rsSpeed: BASE_SPEED, rsBurst: 0, rsCooldown: 0,
-  mazeTimer: null, mazeTick: 0, mazeCooldown: 0, mazesSolved: 0, mazeDifficulty: 1,
+  mazeTimer: null, mazePhase: '', mazePhaseEnd: 0, mazeFrames: [], mazesSolved: 0, mazeDifficulty: 1,
   animTimer: null, animSteps: 0, animStepPx: 0,
   pending: { gesture: '', conf: 0, threshold: 0 },
   probs: {},
@@ -65,7 +73,14 @@ subscribeFrames(cube => {
   const a0 = cube.slice(0, N_CHIRP * N_SAMPLE);      // reference_spectrogram uses antenna 0
   st.frameBuf.push(a0);
   if (st.frameBuf.length > 50) st.frameBuf.shift();  // deque(maxlen=50)
-  if (st.capturing) st.captureFrames.push(a0);
+  if (st.capturing) {
+    st.captureFrames.push(a0);
+    if (st.captureFrames.length >= st.captureTarget) captureDone();
+  }
+  if (st.mazePhase === 'capture') {
+    st.mazeFrames.push(a0);
+    if (st.mazeFrames.length >= MODEL_FRAMES) mazeCaptured();
+  }
 });
 
 // ══════════════ soccer field ══════════════
@@ -99,7 +114,8 @@ function fitCanvas(c) {
 
 function badge(ctx, w, overlay, secs, radius) {
   if (!overlay) return;
-  const cfg = { go: ['rgba(39,174,96,0.9)', '🟢 GO!', ''], stop: ['rgba(192,57,43,0.9)', '⛔ WAIT', `${secs.toFixed(1)}s`], reading: ['rgba(41,128,185,0.82)', '🔵 Reading…', ''] }[overlay];
+  const cfg = { go: ['rgba(39,174,96,0.9)', '🟢 GO!', ''], stop: ['rgba(192,57,43,0.9)', '⛔ WAIT', `${secs.toFixed(1)}s`], reading: ['rgba(41,128,185,0.82)', '🔵 Reading…', ''],
+    countdown: ['rgba(230,126,34,0.92)', 'Get ready', `${secs}`] }[overlay];
   if (!cfg) return;
   const bw = Math.max(80, Math.floor(w / 5)), bh = 40, bx = w - bw - 8, by = 10;
   ctx.fillStyle = cfg[0]; ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, radius); ctx.fill();
@@ -187,7 +203,7 @@ function drawMaze() {
   ctx.fillStyle = '#FF8C00'; ctx.font = `bold ${Math.max(10, Math.trunc(cell * 0.48))}px system-ui, sans-serif`;
   ctx.fillText(maze.facingArrow, px + 1 + arrowW / 2, py + emojiH + arrowH / 2);
   if (mazeOverlay && !maze.won) {
-    const col = { go: '#27ae60', stop: '#c0392b', reading: '#2980b9' }[mazeOverlay];
+    const col = { go: '#27ae60', stop: '#c0392b', reading: '#2980b9', countdown: '#e67e22' }[mazeOverlay];
     if (col) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(px + arrowW + Math.floor(dotW / 2), py + emojiH + Math.floor(arrowH / 2), Math.max(4, Math.trunc(cell * 0.11)), 0, 2 * Math.PI); ctx.fill(); }
   }
   if (maze.won) {
@@ -198,6 +214,14 @@ function drawMaze() {
     ctx.font = `${Math.max(10, Math.min(16, Math.floor(gw / 13)))}px system-ui, sans-serif`; ctx.fillText(`${maze.moves} moves. Press Reset for a new maze!`, ox + gw / 2, oy + gh * 0.85);
   }
   if (!maze.won) badge(ctx, w, mazeOverlay, mazeOverlaySecs, 8);
+  // The countdown and GO! big over the maze, so nobody misses the start
+  if (!maze.won && (mazeOverlay === 'countdown' || mazeOverlay === 'go')) {
+    const big = mazeOverlay === 'countdown' ? String(mazeOverlaySecs) : 'GO!';
+    ctx.font = `bold ${Math.max(28, Math.min(96, Math.floor(gh / 3)))}px system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.strokeText(big, ox + gw / 2, oy + gh / 2);
+    ctx.fillStyle = mazeOverlay === 'countdown' ? 'rgba(230,126,34,0.9)' : 'rgba(39,174,96,0.9)'; ctx.fillText(big, ox + gw / 2, oy + gh / 2);
+  }
 }
 
 // ══════════════ confidence bars ══════════════
@@ -230,9 +254,10 @@ function gestureBar(state, secs = 0) {
   if (!state) { el.hidden = true; return; }
   el.hidden = false;
   el.className = `gesture-bar ${state}`;
-  const cfg = { ready: ['🟢', 'Gesture window open. Do a gesture now!'], reading: ['🔵', 'Reading your gesture…'], cooldown: ['🟠', 'Wait. Next window opens in'] }[state];
+  const cfg = { ready: ['🟢', 'Gesture window open. Do a gesture now!'], reading: ['🔵', 'Reading your gesture…'], cooldown: ['🟠', 'Wait. Next window opens in'],
+    countdown: ['🟠', 'Get ready… do your gesture at GO!'], capture: ['🟢', 'GO! Do your gesture now!'] }[state];
   $('gbIcon').textContent = cfg[0]; $('gbText').textContent = cfg[1];
-  $('gbCountdown').textContent = state === 'cooldown' ? `${secs.toFixed(1)}s` : '';
+  $('gbCountdown').textContent = state === 'cooldown' || state === 'capture' ? `${secs.toFixed(1)}s` : state === 'countdown' ? `${secs}` : '';
 }
 function updatePipelineUi(cooldown, isMaze) {
   const secs = cooldown * TICK_MS / 1000;
@@ -386,18 +411,23 @@ function setMode(mode) {
 }
 
 // ══════════════ single prediction ══════════════
+// The next numFramesFor(duration) frames, as Collect records a sample of
+// that duration, so the model sees what it was trained on
 function startCapture() {
+  st.captureTarget = numFramesFor(Number($('captureDuration').value) || 3);
   st.captureFrames = []; st.capturing = true;
   $('captureBtn').disabled = true;
   setStatus('🔴 Capturing… do your gesture now!', '#c0392b');
-  setTimeout(captureDone, Math.trunc(Number($('captureDuration').value) * 1000));
+  clearTimeout(st.captureTimer);
+  st.captureTimer = setTimeout(captureDone, st.captureTarget * FRAME_S * 3000 + 2000);   // the radar stopped
 }
 function captureDone() {
-  st.capturing = false;
+  if (!st.capturing) return;
+  st.capturing = false; clearTimeout(st.captureTimer);
   const frames = st.captureFrames.slice();
-  if (frames.length < 5) { $('captureBtn').disabled = false; setStatus('⚠️ No radar frames. Is the radar connected?', '#c0392b'); return; }
+  if (frames.length < 10) { $('captureBtn').disabled = false; setStatus('⚠️ No radar frames. Is the radar connected?', '#c0392b'); return; }
   setStatus('🔍 Running inference…', '#e67e22');
-  runInference(frames, 'single');
+  runInference(frames, 'single', frames.length);
 }
 
 function animateSingle(gesture) {
@@ -450,29 +480,48 @@ function applyRsGesture(gesture) {
 }
 
 // ══════════════ Maze ══════════════
+// Each move: countdown (3, 2, 1), GO! and the next MODEL_FRAMES frames are
+// captured (2 s), the model reads them, the robot moves, next countdown.
 function startMaze() {
   const [rows, cols] = DIFFICULTY_SIZES[st.mazeDifficulty];
   maze.newMaze(rows, cols); updateFacing();
-  Object.assign(st, { mazeTick: 0, mazeCooldown: 0, inferenceRunning: false, cacheProbs: {}, cacheRemaining: 0, lastInferDone: 0 });
+  Object.assign(st, { inferenceRunning: false, cacheProbs: {}, cacheRemaining: 0, lastInferDone: 0 });
   $('mazeStartBtn').hidden = true; $('mazeStopBtn').hidden = false;
-  setStatus('Maze running. Do a gesture to move!', '#8e44ad');
-  gestureBar('ready'); setMazeOverlay('go');
+  setStatus('Maze running. Do your gesture when you see GO!', '#8e44ad');
+  mazeCountdown();
   st.mazeTimer = setInterval(onMazeTick, TICK_MS);
 }
 function stopMaze() {
   clearInterval(st.mazeTimer); st.mazeTimer = null;
+  st.mazePhase = ''; st.mazeFrames = [];
   $('mazeStartBtn').hidden = false; $('mazeStopBtn').hidden = true;
   gestureBar(''); setMazeOverlay('');
   setStatus('Maze stopped. Press Start to try again!', '#555');
 }
+function mazeCountdown() {
+  st.mazePhase = 'countdown'; st.mazePhaseEnd = performance.now() + MAZE_COUNTDOWN_S * 1000;
+  onMazeTick();
+}
+function mazeCaptured() {
+  const frames = st.mazeFrames.slice(0, MODEL_FRAMES);
+  st.mazePhase = 'reading'; st.mazeFrames = [];
+  onMazeTick();
+  runInference(frames, 'maze', MODEL_FRAMES);
+  if (!st.inferenceRunning && st.mazeTimer) mazeCountdown();      // the model could not start; try the next move
+}
 function onMazeTick() {
-  st.mazeTick += 1;
-  if (st.mazeCooldown > 0) st.mazeCooldown -= 1;
-  if (st.mazeTick % MAZE_INFER_EVERY === 0 && !st.inferenceRunning && st.mazeCooldown === 0 && performance.now() - st.lastInferDone >= minInferGapMs()) {
-    const frames = st.frameBuf.slice(-MAZE_CAPTURE_FRAMES);
-    if (frames.length >= MAZE_MIN_FRAMES) runInference(frames, 'maze');
+  const now = performance.now();
+  if (st.mazePhase === 'countdown') {
+    const left = (st.mazePhaseEnd - now) / 1000;
+    if (left <= 0) {
+      st.mazePhase = 'capture'; st.mazeFrames = [];
+      st.mazePhaseEnd = now + MODEL_FRAMES * FRAME_S * 3000 + 2000;     // the radar stopped
+    } else { gestureBar('countdown', Math.ceil(left)); setMazeOverlay('countdown', Math.ceil(left)); return; }
   }
-  updatePipelineUi(st.mazeCooldown, true);
+  if (st.mazePhase === 'capture') {
+    if (now > st.mazePhaseEnd) { setStatus('⚠️ No radar frames. Is the radar connected?', '#c0392b'); mazeCountdown(); return; }
+    gestureBar('capture', Math.max(0, MODEL_FRAMES - st.mazeFrames.length) * FRAME_S); setMazeOverlay('go');
+  } else if (st.mazePhase === 'reading') { gestureBar('reading'); setMazeOverlay('reading'); }
 }
 function mazeReset() {
   if (st.mazeTimer) stopMaze();
@@ -497,21 +546,21 @@ function setDifficulty(idx) {
 }
 
 // ══════════════ inference ══════════════
-function runInference(frames, mode) {
+function runInference(frames, mode, epochFrames = MODEL_FRAMES) {
   if (st.inferenceRunning) return;
   if (!st.modelReady) {
     setStatus('⚠️ No model loaded! Please load a model first.', '#c0392b');
     if (mode === 'single') $('captureBtn').disabled = false;
     return;
   }
-  if (mode !== 'single' && st.cacheRemaining > 0 && Object.keys(st.cacheProbs).length) {
+  if (mode === 'robosoccer' && st.cacheRemaining > 0 && Object.keys(st.cacheProbs).length) {
     st.cacheRemaining -= 1;
     onInferenceResult(st.cacheProbs, mode, true);
     return;
   }
   st.inferenceRunning = true; st.pendingMode = mode;
   const picture = $('previousPicture').checked ? 'previous' : 'current';
-  st.worker.postMessage({ type: 'predict', id: ++st.reqId, frames, nChirp: N_CHIRP, nSample: N_SAMPLE, jetVmin: currentJetVmin(), picture });
+  st.worker.postMessage({ type: 'predict', id: ++st.reqId, frames, nChirp: N_CHIRP, nSample: N_SAMPLE, jetVmin: currentJetVmin(), picture, epochFrames });
 }
 
 function showPreview(image) {
@@ -576,7 +625,8 @@ function onInferenceResult(probs, mode, fromCache, image) {
       updateFacing(); drawMaze();
       setStatus(`${n} (${pct0(conf)})  ·  ${feedback}`, feedback.toLowerCase().includes('wall') ? '#e74c3c' : '#27ae60');
     }
-    st.mazeCooldown = 90; st.frameBuf = []; st.cacheProbs = {}; st.cacheRemaining = 0;
+    st.cacheProbs = {}; st.cacheRemaining = 0;
+    if (st.mazeTimer && !maze.won) mazeCountdown(); else if (st.mazeTimer) { st.mazePhase = ''; gestureBar(''); setMazeOverlay(''); }
   }
 }
 
@@ -584,6 +634,7 @@ function onInferenceError(msg, mode) {
   st.inferenceRunning = false;
   setStatus(`⚠️ ${msg.split('\n')[0]}`, '#c0392b');
   if (mode === 'single') $('captureBtn').disabled = false;
+  if (mode === 'maze' && st.mazeTimer) mazeCountdown();
 }
 
 // ══════════════ wiring ══════════════

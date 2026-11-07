@@ -25,9 +25,11 @@ export const MIN_FRAMES = 10;
 // training image { rgb, width, height } or null when there are too few frames.
 // picture 'previous' draws it as SensDS did before the change note, for the
 // starter model (src/test/previous_picture.js).
-export function framesToImage(frames, nChirp, nSample, jetVmin, picture = 'current') {
+// epochFrames: how many of the last frames are drawn (the Test tab passes 20,
+// a Collect sample of "3 s"; the desktop's own default is 30).
+export function framesToImage(frames, nChirp, nSample, jetVmin, picture = 'current', epochFrames = EPOCH_FRAMES) {
   if (frames.length < MIN_FRAMES) return null;
-  const epoch = frames.slice(-EPOCH_FRAMES);
+  const epoch = frames.slice(-epochFrames);
   if (picture === 'previous') return previousImage(epoch, nChirp, nSample);
   const { spectrogram, dopplerBins } = computeRecorded(epoch, nChirp, nSample);
   return trainingImage(spectrogram, epoch.length, dopplerBins, jetVmin);

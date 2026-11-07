@@ -184,3 +184,10 @@ test('framesToImage draws the previous way only when asked', () => {
   assert.deepEqual(prev.rgb, previousImage(frames, 128, 256).rgb);
   assert.notDeepEqual(prev.rgb, cur.rgb);
 });
+
+test('the Test tab draws the last 20 frames, a Collect sample of "3 s"', async () => {
+  const { numFramesFor } = await import('../src/collect/capture.js');
+  assert.equal(numFramesFor(3.0), 20);
+  const frames = Array.from({ length: 30 }, (_, f) => sdkScale(syntheticRaw(f)));
+  assert.deepEqual(framesToImage(frames, 128, 256, -50, 'current', 20).rgb, framesToImage(frames.slice(-20), 128, 256, -50).rgb);
+});

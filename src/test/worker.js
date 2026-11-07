@@ -2,7 +2,7 @@
 // thread), on the GPU when available.
 //
 // in:  { type: 'load', files: { configText, preprocessorText, weights } }
-//      { type: 'predict', id, frames: [Float32Array antenna 0], nChirp, nSample, jetVmin, picture }
+//      { type: 'predict', id, frames: [Float32Array antenna 0], nChirp, nSample, jetVmin, picture, epochFrames }
 // out: { type: 'loaded', classes, backend } | { type: 'result', id, probs, image }
 //      { type: 'error', id?, message }
 
@@ -22,7 +22,7 @@ self.onmessage = async ({ data }) => {
       self.postMessage({ type: 'loaded', classes: model.classes, backend: backend.name });
     } else if (data.type === 'predict') {
       if (!model) throw new Error('No model loaded! Please load a model first.');
-      const image = framesToImage(data.frames, data.nChirp, data.nSample, data.jetVmin, data.picture);
+      const image = framesToImage(data.frames, data.nChirp, data.nSample, data.jetVmin, data.picture, data.epochFrames);
       if (!image) throw new Error('Not enough frames for inference.');
       const probs = await predict(tf, model, image);
       self.postMessage({ type: 'result', id: data.id, probs, image }, [image.rgb.buffer]);
