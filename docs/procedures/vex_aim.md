@@ -20,6 +20,8 @@ Before you start:
    **Allow**. The status turns green when the robot answers.
 4. Pick a mode:
    - **Single Command**: press Start, do a gesture within the capture time; the robot acts once.
+     The model sees as many frames as a Collect sample of the same duration (20 for "3 s", about
+     2 s of radar), as in the Test tab; RoboSoccer reads the last 20 (both used to take 30).
    - **RoboSoccer**: the robot rolls forward on its own; each recognized class does its Class
      Action (by default: swipe left or right to turn 30 degrees, push to kick, idle to keep
      going). After a command the gesture bar shows a 3 s wait.

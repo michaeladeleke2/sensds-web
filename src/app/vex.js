@@ -8,6 +8,9 @@
 //   swipe_left / swipe_right turn 30 degrees, push kicks hard, idle and any
 //   other class send nothing. Five failed drive commands in a row mean the
 //   robot is gone.
+// The model is shown as many frames as the Collect tab records for a sample
+// (numFramesFor: 20 for "3 s"): Single Command captures that many for its
+// duration, RoboSoccer reads the last 20, as the Test tab does.
 // The prediction cache, minimum gap between inferences, messages and log are
 // the desktop's. Inference uses the Test tab's worker (a separate copy).
 //
@@ -22,6 +25,7 @@ import { subscribeFrames } from './radar_session.js';
 import { currentJetVmin, onReduceNoiseChange } from './settings.js';
 import { canChooseFolder } from '../io/folder.js';
 import { chooseModelFolder } from './model_folder.js';
+import { numFramesFor } from '../collect/capture.js';
 import { AimRobot, TurnType, KickType } from '../vex/aim_client.js';
 
 const N_CHIRP = 128, N_SAMPLE = 256;
@@ -81,7 +85,10 @@ subscribeFrames(cube => {
   const a0 = cube.slice(0, N_CHIRP * N_SAMPLE);
   st.frameBuf.push(a0);
   if (st.frameBuf.length > 50) st.frameBuf.shift();          // deque(maxlen=50): 5 s, more than one 3 s epoch
-  if (st.capturing) st.captureFrames.push(a0);
+  if (st.capturing) {
+    st.captureFrames.push(a0);
+    if (st.captureFrames.length >= st.captureTarget) singleCaptureDone();
+  }
   if (visible()) st.proc.push(a0);
 });
 function buildPlot() {
@@ -253,19 +260,23 @@ async function onStop() {
   log('Stopped.');
 }
 
+const MODEL_FRAMES = numFramesFor(3.0);                // 20 frames, a Collect sample of "3 s"
 function startSingle() {
+  const secs = Number($('vexDuration').value) || 3;
+  st.captureTarget = numFramesFor(secs);
   st.captureFrames = []; st.capturing = true;
   $('vexStartBtn').disabled = true;
-  const secs = Number($('vexDuration').value);
-  log(`Capturing for ${secs.toFixed(1)} s…`);
-  setTimeout(singleCaptureDone, Math.trunc(secs * 1000));
+  log(`Capturing for ${secs.toFixed(1)} s (${st.captureTarget} frames)…`);
+  clearTimeout(st.captureTimer);
+  st.captureTimer = setTimeout(singleCaptureDone, st.captureTarget * 300 + 2000);   // the radar stopped
 }
 function singleCaptureDone() {
-  st.capturing = false;
+  if (!st.capturing) return;
+  st.capturing = false; clearTimeout(st.captureTimer);
   const frames = st.captureFrames.slice();
-  if (frames.length < 5) { log('Too few frames. Connect the radar and try again.'); refreshStart(); return; }
+  if (frames.length < 10) { log('Too few frames. Connect the radar and try again.'); refreshStart(); return; }
   log(`Running inference on ${frames.length} frames…`);
-  runInference(frames, 'single');
+  runInference(frames, 'single', frames.length);
 }
 
 async function startRobosoccer() {
@@ -314,7 +325,7 @@ function updateBar() {
 function stopBar() { clearInterval(st.barTimer); st.barTimer = null; gestureBar(''); }
 
 // ══════════════ inference ══════════════
-function runInference(frames, mode) {
+function runInference(frames, mode, epochFrames = MODEL_FRAMES) {
   if (st.inferenceRunning || !st.modelReady) return;
   if (mode === 'robosoccer' && st.cacheRemaining > 0 && Object.keys(st.cacheProbs).length) {
     st.cacheRemaining -= 1;
@@ -322,7 +333,7 @@ function runInference(frames, mode) {
     return;
   }
   st.inferenceRunning = true; st.pendingMode = mode;
-  st.worker.postMessage({ type: 'predict', id: ++st.reqId, frames, nChirp: N_CHIRP, nSample: N_SAMPLE, jetVmin: currentJetVmin() });
+  st.worker.postMessage({ type: 'predict', id: ++st.reqId, frames, nChirp: N_CHIRP, nSample: N_SAMPLE, jetVmin: currentJetVmin(), epochFrames });
 }
 
 // _apply_gesture, with the class's chosen action

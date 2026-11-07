@@ -666,7 +666,10 @@ export function initTest() {
 export function hideTest() {
   if (st.rsTimer) stopRobosoccer();
   if (st.mazeTimer) stopMaze();
-  st.capturing = false;
+  if (st.capturing) {                                  // the capture is dropped
+    st.capturing = false; clearTimeout(st.captureTimer);
+    $('captureBtn').disabled = !st.modelReady; setStatus('');
+  }
 }
 // The starter model is the default: opening the tab with no model loads it
 export function showTest() {
