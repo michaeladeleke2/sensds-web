@@ -50,7 +50,17 @@ const main = staticClosure(entries);
 // Code loaded on demand (the radar, on Connect Radar) is included too, and the
 // files workers fetch (the SensAV image model weights).
 const files = new Set([...PAGES, 'assets/logo-mark.png', 'assets/favicon.png', ...main.seen]);
-for (const d of new Set(main.dynamic)) for (const f of staticClosure([d]).seen) files.add(f);
+// Followed through: code loaded on demand can load more on demand (the
+// previous chirp's register list, from the radar code)
+const dynQueue = [...new Set(main.dynamic)], dynSeen = new Set();
+while (dynQueue.length) {
+  const d = dynQueue.shift();
+  if (dynSeen.has(d)) continue;
+  dynSeen.add(d);
+  const c = staticClosure([d]);
+  for (const f of c.seen) files.add(f);
+  dynQueue.push(...c.dynamic);
+}
 const strata = [...files].filter(isStrata);
 // The starter model (src/test/starter_model.js fetches it by name): published,
 // but not put in the offline cache's install list; it keeps its own cache

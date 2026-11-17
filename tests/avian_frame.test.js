@@ -155,3 +155,26 @@ test('exported SensDSv2 register list: 38 registers, start sequence with slice 8
   assert.equal(seq.length, 38);
   assert.equal(seq.at(-1), (((0x00 << 25) | 0x01000000 | REGISTERS.get(0x00)) | 1) >>> 0);   // MAIN last, FRAME_START set
 });
+
+test('previous chirp register list: the SDK export of 2026-10-05, the same frame, a different chirp', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { parseRegisterFile } = await import('../src/avian/registers.js');
+  const prev = await import('../src/avian/registers_tr13c_previous.js');
+  const cur = await import('../src/avian/registers_tr13c.js');
+  const { registersFor } = await import('../src/avian/device.js');
+  // Byte for byte what Radar SDK 3.6.4 saved for the 0.2 ms chirp
+  const sdk = parseRegisterFile(readFileSync(new URL('./fixtures/radar/registers_sdk364_previous.txt', import.meta.url), 'utf8'));
+  assert.deepEqual([...prev.REGISTERS], [...sdk]);
+  assert.equal(prev.EXPORT_INFO.config.chirp_repetition_time_s, 0.0002);
+  assert.equal(prev.EXPORT_INFO.config.sample_rate_Hz, 2e6);
+  assert.equal(prev.EXPORT_INFO.config.hp_cutoff_Hz, 80000);
+  // Same frame shape and timing, so the acquisition needs nothing else
+  for (const k of ['frame_repetition_time_s', 'num_chirps', 'num_samples', 'rx_mask', 'start_frequency_Hz', 'end_frequency_Hz'])
+    assert.equal(prev.EXPORT_INFO.config[k], cur.EXPORT_INFO.config[k], k);
+  assert.deepEqual(prev.EXPORT_INFO.frames.shape, cur.EXPORT_INFO.frames.shape);
+  // Only the ADC, filter and chirp timing registers differ
+  const differ = [...cur.REGISTERS.keys()].filter(a => cur.REGISTERS.get(a) !== prev.REGISTERS.get(a));
+  assert.deepEqual(differ, [0x01, 0x12, 0x2D, 0x30, 0x31, 0x32, 0x37]);
+  assert.equal(await registersFor('previous'), prev.REGISTERS);
+  assert.equal(await registersFor('current'), cur.REGISTERS);
+});

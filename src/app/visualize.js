@@ -18,12 +18,13 @@ import { RangeMapClient } from '../dsp/range_client.js';
 import { RangeMapPlot } from '../viz/range_plot.js';
 import { parseNpy, framesFromNpy, writeNpyFloat32 } from '../io/npy.js';
 import { subscribeFrames, isConnected, radarStats, disconnectRadar } from './radar_session.js';
-import { currentJetVmin, getReduceNoise, setReduceNoise, onReduceNoiseChange, getRangeSettings, setRangeSettings, onRangeSettingsChange, rangeMode, RANGE_MAX_M } from './settings.js';
+import { currentJetVmin, getReduceNoise, setReduceNoise, onReduceNoiseChange, getRangeSettings, setRangeSettings, onRangeSettingsChange, rangeMode, RANGE_MAX_M, currentMaxSpeed, onRadarChirpChange } from './settings.js';
 
 const FPS = 10;                       // frame_repetition_time_s = 0.1
 const REDRAW_MS = 200;                // ReferenceSpectrogramView._REDRAW_MS
 const REBUILD_MS = 300;               // VisualizeTab._ref_rebuild interval
-const REF_MAX_SPEED_M_S = 4.112380411522634;
+// The speed axis follows the radar's chirp (settings.js): +/-4.112380411522634
+// m/s for the current chirp, 1.5 times that with the previous one (Test tab).
 const REF_ANTENNA = 0;
 
 const $ = id => document.getElementById(id);
@@ -61,7 +62,7 @@ function buildView() {
   if (state.view === 'range') { buildRangeView(); return; }
   state.proc ??= new LiveProcessorClient(({ history, dopplerBins, count }) => { state.count = count; state.pending = { history, count, dopplerBins }; });
   state.proc.reset({ nSample, nChirp, historyLength: historyFrames() });
-  state.plot = new LiveSpectrogramPlot(canvas, { historyLength: historyFrames(), maxSpeed: REF_MAX_SPEED_M_S, jetVmin: currentJetVmin() });
+  state.plot = new LiveSpectrogramPlot(canvas, { historyLength: historyFrames(), maxSpeed: currentMaxSpeed(), jetVmin: currentJetVmin() });
   state.count = 0;
   state.pending = null;
   if (visible()) state.plot.drawEmpty();
@@ -106,7 +107,7 @@ function updateReadout() {
     `Drawn by       reference script\n` +
     `Antenna        ${REF_ANTENNA}\n` +
     `History        ${frames} frames (${(frames / 10).toFixed(0)} s)\n` +
-    `Velocity       +/-${REF_MAX_SPEED_M_S.toFixed(2)} m/s\n` +
+    `Velocity       +/-${(state.plot ? state.plot.maxSpeed : currentMaxSpeed()).toFixed(2)} m/s${currentMaxSpeed() > 5 ? ' (previous chirp)' : ''}\n` +
     `Color floor    ${vmin.toFixed(0)} dB (jet_vmin)\n` +
     `Redraw         ${(1000 / REDRAW_MS).toFixed(0)} per second\n` +
     `Toward radar   below the center`;
@@ -263,6 +264,7 @@ $('timeSlider').oninput = e => {
 $('noiseChk').checked = getReduceNoise();
 $('noiseChk').onchange = e => setReduceNoise(e.target.checked);
 onReduceNoiseChange(on => { $('noiseChk').checked = on; buildView(); });
+onRadarChirpChange(() => buildView());
 
 $('sizeSel').onchange = e => {
   // Maximum, not fixed, so the plot still shrinks on a small screen.

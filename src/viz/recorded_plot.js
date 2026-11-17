@@ -6,14 +6,14 @@
 import { makeImage, jetClim } from './image.js';
 import { axisTicks, yTickSpace } from './ticks.js';
 
-const DASH = [3.7, 1.6], GRID_PT = 0.7, MAX_SPEED = 4.112380411522634;
+const DASH = [3.7, 1.6], GRID_PT = 0.7, MAX_SPEED = 4.112380411522634;   // the current chirp's axis; draw() takes the recording's
 
 export class RecordedSpectrogramPlot {
   constructor(canvas) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.last = null; }
 
   // spectrogram: Float64Array (nFrame x bins), as compute_recorded returns it
-  draw(spectrogram, nFrame, bins, jetVmin) {
-    this.last = { spectrogram, nFrame, bins, jetVmin };
+  draw(spectrogram, nFrame, bins, jetVmin, maxSpeed = MAX_SPEED) {
+    this.last = { spectrogram, nFrame, bins, jetVmin, maxSpeed };
     const dpr = window.devicePixelRatio || 1, r = this.canvas.getBoundingClientRect();
     const W = Math.max(1, Math.round(r.width * dpr)), H = Math.max(1, Math.round(r.height * dpr));
     if (this.canvas.width !== W || this.canvas.height !== H) { this.canvas.width = W; this.canvas.height = H; }
@@ -31,15 +31,15 @@ export class RecordedSpectrogramPlot {
     ctx.strokeStyle = 'rgba(255,255,255,0.55)';
     ctx.lineWidth = px(GRID_PT);
     ctx.setLineDash(DASH.map(d => px(d * GRID_PT)));
-    for (const t of axisTicks(-MAX_SPEED, MAX_SPEED, yTickSpace(H, dpi))) {
-      const y = Math.floor(H * (1 - (t.value + MAX_SPEED) / (2 * MAX_SPEED))) + 0.5;
+    for (const t of axisTicks(-maxSpeed, maxSpeed, yTickSpace(H, dpi))) {
+      const y = Math.floor(H * (1 - (t.value + maxSpeed) / (2 * maxSpeed))) + 0.5;
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     }
   }
 
   redraw(jetVmin) {
     if (!this.last) return;
-    const { spectrogram, nFrame, bins } = this.last;
-    this.draw(spectrogram, nFrame, bins, jetVmin ?? this.last.jetVmin);
+    const { spectrogram, nFrame, bins, maxSpeed } = this.last;
+    this.draw(spectrogram, nFrame, bins, jetVmin ?? this.last.jetVmin, maxSpeed);
   }
 }

@@ -16,7 +16,7 @@ import { trainingImage } from '../collect/training_image.js';
 import { resizeBilinear } from '../io/resize.js';
 import { readSafetensors } from '../io/safetensors.js';
 import { configFromHf, loadParams, forward } from '../train/vit.js';
-import { previousImage } from './previous_picture.js';
+import { previousImage, speedRatio } from './previous_picture.js';
 
 export const EPOCH_FRAMES = 30;          // core.processing.EPOCH_FRAMES
 export const MIN_FRAMES = 10;
@@ -27,10 +27,12 @@ export const MIN_FRAMES = 10;
 // starter model (src/test/previous_picture.js).
 // epochFrames: how many of the last frames are drawn (the Test tab passes 20,
 // a Collect sample of "3 s"; the desktop's own default is 30).
-export function framesToImage(frames, nChirp, nSample, jetVmin, picture = 'current', epochFrames = EPOCH_FRAMES) {
+// chirpS: the chirp the frames were recorded with (the previous drawing
+// stretches the 0.3 ms chirp's speeds, not the 0.2 ms chirp's).
+export function framesToImage(frames, nChirp, nSample, jetVmin, picture = 'current', epochFrames = EPOCH_FRAMES, chirpS = undefined) {
   if (frames.length < MIN_FRAMES) return null;
   const epoch = frames.slice(-epochFrames);
-  if (picture === 'previous') return previousImage(epoch, nChirp, nSample);
+  if (picture === 'previous') return previousImage(epoch, nChirp, nSample, speedRatio(chirpS));
   const { spectrogram, dopplerBins } = computeRecorded(epoch, nChirp, nSample);
   return trainingImage(spectrogram, epoch.length, dopplerBins, jetVmin);
 }

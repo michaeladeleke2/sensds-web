@@ -53,7 +53,9 @@ export function captureInfoJson(jetVmin, when = new Date(), chirpRepS = CHIRP_RE
 }
 
 // capture_mismatch for the Infineon method: "" when the folder agrees.
-export function captureMismatch(hasSamples, info, jetVmin) {
+// chirpS: the radar's chirp now; samples recorded with another chirp are
+// flagged (the Test tab can switch the radar to the previous chirp).
+export function captureMismatch(hasSamples, info, jetVmin, chirpS) {
   if (!hasSamples) return '';
   if (!info) return 'This folder has samples from before SensDS recorded these settings. If they were collected differently, the mix will confuse the model.';
   const oldRenderer = info.renderer ?? 'sensds';
@@ -62,6 +64,8 @@ export function captureMismatch(hasSamples, info, jetVmin) {
   if (!sameMethod) diffs.push(`method was ${info.spectrogram_method}`);
   else if (oldRenderer !== 'reference') diffs.push("they were drawn with the app's own coloring");
   else if (Number(info.jet_vmin ?? -20.0) !== jetVmin) diffs.push('the Reduce noise setting was different');
+  if (chirpS !== undefined && info.chirp_repetition_time_s !== undefined && Math.abs(Number(info.chirp_repetition_time_s) - chirpS) > 1e-9)
+    diffs.push(`they were recorded with the ${(Number(info.chirp_repetition_time_s) * 1000).toFixed(1)} ms chirp and the radar is on the ${(chirpS * 1000).toFixed(1)} ms chirp now`);
   if (!diffs.length) return '';
   const fix = sameMethod && oldRenderer !== 'reference' ? 'Delete them first' : 'Delete them or switch back';
   return `Existing samples here do not match: ${diffs.join(', ')}. ${fix}, or the model will be trained on two different kinds of picture.`;

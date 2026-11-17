@@ -31,14 +31,16 @@ import { JET_LUT_BYTES, lutIndex } from '../viz/jet.js';
 import { referenceRgb } from '../collect/training_image.js';
 import { axisTicks } from '../viz/ticks.js';
 import { subscribeFrames } from './radar_session.js';
-import { currentJetVmin, onReduceNoiseChange, getRangeSettings, setRangeSettings, onRangeSettingsChange, rangeMode, RANGE_MAX_M } from './settings.js';
+import { currentJetVmin, onReduceNoiseChange, getRangeSettings, setRangeSettings, onRangeSettingsChange, rangeMode, RANGE_MAX_M, currentMaxSpeed, onRadarChirpChange } from './settings.js';
 import { fitCurve, snapToPeak, autoTrace, cleanTrace, findPeaks, peakStart, MODEL_SINUSOID, MODEL_DAMPED, MODEL_EXP, MODEL_LABELS } from '../curvefit/fit.js';
 import { explainFit, explainPeaks } from '../curvefit/explain.js';
 
 const FPS = 10;
 const REDRAW_MS = 200;
 const REBUILD_MS = 300;
-const MAX_SPEED = 4.112380411522634;          // the reference script's velocity axis
+// The reference script's velocity axis, +/-4.112380411522634 m/s, or 1.5 times
+// that while the radar runs the previous chirp (Test tab)
+const maxSpeed = () => currentMaxSpeed();
 const VIEW_VEL = 3;                    // shown velocity range, +/- m/s (team feedback)
 const STILL_BAND = 0.1;                // m/s around 0 that Auto Fit ignores on the spectrogram (things standing still)
 const TRACE_COLOR = '#ff00ff';
@@ -78,7 +80,7 @@ const RANGE_BINS = N_SAMPLE * 2;                                  // range_map.p
 const RANGE_M = rangeAxisM(RANGE_BINS, N_SAMPLE * 4, { nSample: N_SAMPLE });
 const RANGE_STEP = RANGE_M[1] - RANGE_M[0];
 const timeScale = () => st.window / st.width;
-const velScale = () => (2 * MAX_SPEED) / DOPPLER_BINS;
+const velScale = () => (2 * maxSpeed()) / DOPPLER_BINS;
 
 // What the vertical axis is for the current picture
 function axis() {
@@ -91,7 +93,7 @@ function axis() {
   }
   return {
     quantity: 'velocity', label: 'Velocity (m/s)', unit: 'm/s', yr: [-VIEW_VEL, VIEW_VEL], rows: DOPPLER_BINS,
-    scale: velScale(), rowOffset: DOPPLER_BINS / 2, top: MAX_SPEED,
+    scale: velScale(), rowOffset: DOPPLER_BINS / 2, top: maxSpeed(),
   };
 }
 
@@ -635,6 +637,8 @@ export function initCurveFit() {
   });
 
   onReduceNoiseChange(() => { setImageFromSpec(st.shownSpec); draw(); });
+  // Another chirp changes the speed axis: a frozen picture from the other one is let go
+  onRadarChirpChange(() => { if (st.frozen) resume(); clearTrace(true); draw(); });
   new ResizeObserver(() => { draw(); drawFit(); }).observe($('cfPlotWrap'));
   new ResizeObserver(drawFit).observe(fitCanvas);
   renderFreqInputs();

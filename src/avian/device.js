@@ -33,10 +33,19 @@ const HOST_PROTOCOL_MAJOR = 4;
 
 export { FrameAcquisitionFailed, FifoOverflow, FrameSizeNotSupported } from '../transport/strata.js';
 
+// The register list for a chirp: 'current' (the change note) or 'previous'
+// (the 0.2 ms chirp, src/avian/registers_tr13c_previous.js, loaded on demand).
+// Both lists have the same frame size, so nothing else changes.
+export async function registersFor(chirp) {
+  if (chirp !== 'previous') return REGISTERS;
+  return (await import('./registers_tr13c_previous.js')).REGISTERS;
+}
+
 export class RadarDevice {
-  constructor(port, { log = () => {} } = {}) {
+  constructor(port, { log = () => {}, registers = REGISTERS } = {}) {
     this.port = port;
     this.log = log;
+    this.baseRegisters = registers;
     this.acq = deriveAcquisition(SENSDS_CONFIG);
     this.link = null;
     this.started = false;
@@ -98,7 +107,7 @@ export class RadarDevice {
 
     await dataConfigure(this.link, DATA_INDEX, readoutAddress(), sliceSize);
     await dataStart(this.link, DATA_INDEX);
-    this.registers = applySliceSize(REGISTERS, sliceSize);       // Driver::set_slice_size
+    this.registers = applySliceSize(this.baseRegisters, sliceSize);   // Driver::set_slice_size
     await executeSpiWords(this.link, configurationSequence(this.registers, true));
     this.started = true;
   }
@@ -135,6 +144,12 @@ export class RadarDevice {
     }
     this.link.clearInput();
     await this.start();
+  }
+
+  // Another register list (the other chirp): acquisition restarted with it
+  async useRegisters(registers) {
+    this.baseRegisters = registers;
+    if (this.started) await this.restart();
   }
 
   async close() {

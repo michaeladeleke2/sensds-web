@@ -191,3 +191,12 @@ test('the Test tab draws the last 20 frames, a Collect sample of "3 s"', async (
   const frames = Array.from({ length: 30 }, (_, f) => sdkScale(syntheticRaw(f)));
   assert.deepEqual(framesToImage(frames, 128, 256, -50, 'current', 20).rgb, framesToImage(frames.slice(-20), 128, 256, -50).rgb);
 });
+
+test('with the previous radar chirp the previous drawing is not stretched', async () => {
+  const frames = Array.from({ length: 20 }, (_, f) => sdkScale(syntheticRaw(f)));
+  assert.deepEqual(framesToImage(frames, 128, 256, -50, 'previous', 20, 0.0002).rgb, previousImage(frames, 128, 256, 1).rgb);
+  assert.deepEqual(framesToImage(frames, 128, 256, -50, 'previous', 20, 0.0003).rgb, previousImage(frames, 128, 256, 1.5).rgb);
+  const { maxSpeedFor, CHIRP_PREVIOUS_S } = await import('../src/app/settings.js');
+  assert.equal(maxSpeedFor(0.0003), 4.112380411522634);
+  assert.ok(Math.abs(maxSpeedFor(CHIRP_PREVIOUS_S) - 6.168570617283951) < 1e-12);
+});

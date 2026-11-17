@@ -6,7 +6,9 @@
 
 const subscribers = new Set();
 const stateListeners = new Set();
-const session = { port: null, device: null, running: false, drops: 0, frames: 0, mod: null, restarts: 0, goodSinceRestart: 0 };
+import { getRadarChirp, onRadarChirpChange } from './settings.js';
+
+const session = { port: null, device: null, running: false, drops: 0, frames: 0, mod: null, restarts: 0, goodSinceRestart: 0, chirp: 'current', switchTo: null };
 const MAX_RESTARTS = 3;          // in a row, before giving up
 
 export const isConnected = () => Boolean(session.device);
@@ -30,7 +32,8 @@ export async function connectRadar() {
   catch { emit(false, 'No radar selected.'); return false; }
 
   emit(false, 'Connecting to the radar…');
-  const device = new session.mod.RadarDevice(port, { log: m => console.debug('[radar]', m) });
+  const chirp = getRadarChirp();
+  const device = new session.mod.RadarDevice(port, { log: m => console.debug('[radar]', m), registers: await session.mod.registersFor(chirp) });
   try {
     const { firmware } = await device.open();
     emit(false, `Radar found: BGT60TR13C, firmware ${firmware}. Starting…`);
@@ -40,8 +43,9 @@ export async function connectRadar() {
     emit(false, `Could not start the radar: ${e.message}`);
     return false;
   }
-  Object.assign(session, { port, device, running: true, drops: 0, frames: 0, restarts: 0, goodSinceRestart: 0 });
-  emit(true, 'Radar streaming: BGT60TR13C, 3 antennas, 10 frames per second.');
+  Object.assign(session, { port, device, running: true, drops: 0, frames: 0, restarts: 0, goodSinceRestart: 0, chirp, switchTo: null });
+  emit(true, `Radar streaming: BGT60TR13C, 3 antennas, 10 frames per second${chirp === 'previous' ? ', previous chirp (0.2 ms)' : ''}.`);
+  if (getRadarChirp() !== chirp) session.switchTo = getRadarChirp();     // changed while connecting
   loop();
   return true;
 }
@@ -50,6 +54,16 @@ async function loop() {
   const { mod } = session;
   while (session.running) {
     try {
+      // The chirp was changed (Test tab): restart the acquisition with the
+      // other register list, between frames
+      if (session.switchTo && session.switchTo !== session.chirp) {
+        const to = session.switchTo;
+        session.switchTo = null;
+        await session.device.useRegisters(await mod.registersFor(to));
+        session.chirp = to; session.goodSinceRestart = 0;
+        emit(true, to === 'previous' ? 'Radar switched to the previous chirp (0.2 ms, 2 MHz, high-pass 80 kHz).' : 'Radar switched back to the current chirp (0.3 ms, 1 MHz, high-pass 20 kHz).', true);
+        continue;
+      }
       const cube = await session.device.nextFrame();
       if (!session.running) break;
       session.frames++;
@@ -89,7 +103,7 @@ async function reconnect() {
   emit(true, 'Radar not answering. Reconnecting…', true);
   try { await session.device.close(); } catch { /* already gone */ }
   await new Promise(r => setTimeout(r, 500));
-  const device = new mod.RadarDevice(port, { log: m => console.debug('[radar]', m) });
+  const device = new mod.RadarDevice(port, { log: m => console.debug('[radar]', m), registers: await mod.registersFor(session.chirp) });
   try {
     await device.open();
     await device.start();
@@ -111,3 +125,7 @@ export async function disconnectRadar(message) {
   if (device) await device.close();
   emit(false, message ?? `Radar disconnected after ${session.frames} frames.`);
 }
+
+// The chirp the radar is running now (it can lag the setting by a frame)
+export const radarChirpRunning = () => (session.device ? session.chirp : null);
+onRadarChirpChange(mode => { if (session.device) session.switchTo = mode; });

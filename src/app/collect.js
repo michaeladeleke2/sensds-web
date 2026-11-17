@@ -24,7 +24,8 @@ import {
 } from '../io/folder.js';
 import { RecordedSpectrogramPlot } from '../viz/recorded_plot.js';
 import { subscribeFrames, isConnected } from './radar_session.js';
-import { currentJetVmin, getReduceNoise, setReduceNoise, onReduceNoiseChange } from './settings.js';
+import { currentJetVmin, getReduceNoise, setReduceNoise, onReduceNoiseChange, radarChirpS, maxSpeedFor, CHIRP_CURRENT_S, CHIRP_PREVIOUS_S } from './settings.js';
+import { radarChirpRunning } from './radar_session.js';
 
 const CAPTURE_INFO = 'capture_info.json';
 const N_ANT = 3, N_CHIRP = 128, N_SAMPLE = 256, BINS = 512;
@@ -109,10 +110,12 @@ async function onSampleDone(spectrogram, frames) {
   await writeFile(batch.saveDir, `${stem}.npy`, writeNpy(spectrogram, [n, BINS]));
   await writeFile(batch.saveDir, `${stem}_raw.npy`, writeNpy(raw, [n, N_ANT, N_CHIRP, N_SAMPLE]));
   await writeFile(batch.saveDir, `${stem}.png`, await encodePngRgb(img.rgb, img.width, img.height));
-  try { await writeFile(batch.saveDir, CAPTURE_INFO, captureInfoJson(jetVmin)); } catch { /* never let bookkeeping lose a capture */ }
+  // The chirp the radar ran (the Test tab can switch it to the previous one)
+  const chirpS = radarChirpRunning() === 'previous' ? CHIRP_PREVIOUS_S : CHIRP_CURRENT_S;
+  try { await writeFile(batch.saveDir, CAPTURE_INFO, captureInfoJson(jetVmin, new Date(), chirpS)); } catch { /* never let bookkeeping lose a capture */ }
 
   $('previewPlaceholder').hidden = true;
-  preview.draw(spectrogram, n, BINS, jetVmin);
+  preview.draw(spectrogram, n, BINS, jetVmin, maxSpeedFor(chirpS));
   await refreshCounts();
   const { files } = await listNames(batch.saveDir);
   const total = files.filter(isSampleFile).length;
@@ -166,7 +169,7 @@ async function mismatchFor(dir) {
   const text = await readText(dir, CAPTURE_INFO);
   let info = null;
   try { info = text ? JSON.parse(text) : null; } catch { info = null; }
-  return captureMismatch(files.some(isSampleFile), info, currentJetVmin());
+  return captureMismatch(files.some(isSampleFile), info, currentJetVmin(), radarChirpS());
 }
 
 // ---------- samples on disk, and the settings warning ----------

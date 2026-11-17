@@ -56,3 +56,31 @@ export function setRangeSettings(patch) {
   for (const fn of rangeListeners) fn(getRangeSettings(), changed);
 }
 export const onRangeSettingsChange = fn => rangeListeners.add(fn);
+
+// The radar's chirp, for testing the starter model (team feedback): 'current'
+// (0.3 ms, 1 MHz, high-pass 20 kHz, the change note) or 'previous' (0.2 ms,
+// 2 MHz, high-pass 80 kHz, what the starter model's recordings were made
+// with). Chosen on the Test tab; it reprograms the radar
+// (src/avian/registers_tr13c_previous.js), so every tab gets the previous
+// chirp's frames while it is on. Not remembered: each visit starts on the
+// current chirp.
+export const CHIRP_CURRENT_S = 0.0003, CHIRP_PREVIOUS_S = 0.0002;
+// The speed axis is the span of the chirp at 60.75 GHz: +/-4.112380411522634
+// m/s for 0.3 ms (the change note), 1.5 times that for 0.2 ms. (The app
+// labelled the 0.2 ms axis +/-6.19405905 before the change note, the span at
+// 60.5 GHz; this is the same bins at the change note's centre frequency.)
+export const MAX_SPEED_CURRENT = 4.112380411522634;
+export const maxSpeedFor = chirpS => MAX_SPEED_CURRENT * CHIRP_CURRENT_S / (Number(chirpS) || CHIRP_CURRENT_S);   // shorter chirp, faster speeds
+
+const chirpListeners = new Set();
+let radarChirp = 'current';
+export const getRadarChirp = () => radarChirp;
+export const radarChirpS = () => (radarChirp === 'previous' ? CHIRP_PREVIOUS_S : CHIRP_CURRENT_S);
+export const currentMaxSpeed = () => maxSpeedFor(radarChirpS());
+export function setRadarChirp(mode) {
+  mode = mode === 'previous' ? 'previous' : 'current';
+  if (mode === radarChirp) return;
+  radarChirp = mode;
+  for (const fn of chirpListeners) fn(mode);
+}
+export const onRadarChirpChange = fn => chirpListeners.add(fn);

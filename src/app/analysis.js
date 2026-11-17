@@ -18,9 +18,11 @@ import { ScatterPlot, zoomButtons, classColors } from '../viz/scatter.js';
 import { currentFolder, setCurrentFolder, onFolderChange, chooseFolder, ensureWritable, canRead, canChooseFolder } from '../io/folder.js';
 import { LiveSpectrogramPlot } from '../viz/live_plot.js';
 import { RangeMapPlot } from '../viz/range_plot.js';
-import { currentJetVmin, onReduceNoiseChange, getRangeSettings, onRangeSettingsChange, rangeMode } from './settings.js';
+import { currentJetVmin, onReduceNoiseChange, getRangeSettings, onRangeSettingsChange, rangeMode, maxSpeedFor } from './settings.js';
 
-const REF_MAX_SPEED_M_S = 4.112380411522634;
+// The speed axis is the recording's own chirp (capture_info.json): +/-4.11 m/s
+// for the current chirp, 1.5 times that for the previous one
+const chirpOf = r => feat.samples?.find(s => s.student === r?.student && s.gesture === r?.gesture && s.name === r?.name)?.chirpRepS;
 // Figures are drawn at a fixed size and shown scaled, so they look the same
 // whatever room the panel has: the spectrogram at the Visualize tab's
 // "Wide 6.4 x 4.8 in", the range map at the same width.
@@ -160,7 +162,7 @@ function fixedFigure(canvas, w, h) {
 function drawFigure(kind, canvas, size, p = feat.preview) {
   fixedFigure(canvas, ...size);
   if (kind === 'doppler') {
-    new LiveSpectrogramPlot(canvas, { historyLength: p.nFrame, maxSpeed: REF_MAX_SPEED_M_S, jetVmin: currentJetVmin(), title: 'Doppler Spectrogram' })
+    new LiveSpectrogramPlot(canvas, { historyLength: p.nFrame, maxSpeed: maxSpeedFor(chirpOf(feat.selected)), jetVmin: currentJetVmin(), title: 'Doppler Spectrogram' })
       .draw(p.doppler, p.nFrame, p.dopplerBins);
   } else {
     const { min, max } = getRangeSettings();

@@ -93,3 +93,10 @@ test('capture_info.json matches json.dump(indent=2) and mismatch messages', () =
   assert.match(captureMismatch(true, null, -20), /before SensDS recorded/);
   assert.equal(captureMismatch(false, null, -20), '');
 });
+
+test('capture_mismatch warns before mixing samples from two radar chirps', () => {
+  const info = JSON.parse(captureInfoJson(-50, new Date(2026, 10, 17), 0.0003));
+  assert.equal(captureMismatch(true, info, -50, 0.0003), '');
+  assert.match(captureMismatch(true, info, -50, 0.0002), /recorded with the 0\.3 ms chirp and the radar is on the 0\.2 ms chirp now/);
+  assert.equal(captureMismatch(true, { ...info, chirp_repetition_time_s: undefined }, -50, 0.0002), '');   // older folders: unknown
+});

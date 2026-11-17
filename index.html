@@ -301,6 +301,7 @@
   #tabbar button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
   .appbar-right { display: flex; align-items: center; gap: 10px; flex: none; min-width: 0; margin-left: auto; }
   .radar-chip { display: flex; align-items: center; gap: 8px; max-width: 340px; min-width: 0; padding: 6px 12px; border-radius: 999px; background: var(--input-bg); border: 1px solid var(--border); font-size: 12px; color: var(--subtext); }
+  .chirp-chip { flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--warn); background: var(--input-bg); color: var(--warn); font-size: 12px; font-weight: 600; cursor: pointer; }
   .radar-chip #status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .radar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); flex: none; }
   .radar-chip.live .radar-dot { background: var(--ok); box-shadow: 0 0 0 0 rgba(31, 157, 85, 0.5); animation: pulse 2s infinite; }
@@ -538,6 +539,7 @@
       <span class="gami-col"><span id="gamiLevel" class="gami-level">Level 1 · Beginner</span><span class="gami-xp-row"><span class="gami-xp"><span id="gamiXpFill"></span></span><span id="gamiXpText" class="gami-xp-text">XP: 0 / 100</span></span></span>
       <span class="gami-badges">🏅 <span id="gamiBadgeCount">0</span></span>
     </button>
+    <button id="chirpChip" class="chirp-chip" type="button" hidden title="The radar is running the previous chirp (0.2 ms, 2 MHz, high-pass 80 kHz),&#10;chosen on the Test tab for the starter model. Every tab gets these frames.&#10;Click to switch back to the current chirp (0.3 ms).">Previous chirp 0.2 ms ✕</button>
     <div id="radarChip" class="radar-chip"><span class="radar-dot" aria-hidden="true"></span><span id="status" role="status">No source. Open a recording saved by SensDSv2.</span></div>
     <button id="connectBtn" class="btn-primary" disabled title="Live radar needs Chrome or Edge on a computer.">Connect Radar</button>
   </div>
@@ -882,6 +884,7 @@ Both are reduced to 2D with PCA. The one whose classes form tighter, more separa
     <div id="modelLbl" class="model-lbl">No model loaded.</div>
     <div id="classesFrame" class="classes-frame" hidden><div id="classesTitle" class="classes-title">Classes</div><div id="classesLbl" class="classes-lbl"></div></div>
     <label class="check" title="Show the model the spectrogram as SensDS drew it before the October&#10;change (range bin, colour scale, and the speed range of the previous&#10;0.2 ms chirp). The starter model was trained on that drawing, so it&#10;is on for the starter model and off for your own models.&#10;&#10;Only the picture the model sees changes; the radar settings and the&#10;other tabs stay as they are."><input id="previousPicture" type="checkbox"> Previous spectrogram (starter model)</label>
+    <label class="check" title="Run the radar on the previous chirp: 0.2 ms chirp spacing, 2 MHz sample&#10;rate, high-pass 80 kHz, the settings the starter model's recordings were&#10;made with (before the October change). The radar is reprogrammed with the&#10;register list it used then, and restarts for a moment.&#10;&#10;While it is on, every tab gets these frames: Visualize shows the previous&#10;speed range (+/-6.17 m/s), and Collect saves the chirp with each folder&#10;(and warns before mixing chirps). It turns off when the page is reloaded,&#10;or with the orange chip at the top."><input id="previousChirp" type="checkbox"> Previous radar chirp (0.2 ms)</label>
     <hr>
     <div class="test-field-label">Choose a Mode</div>
     <div class="mode-picker">

@@ -83,6 +83,15 @@ Chrome or Edge on a computer, with the radar connected.
   `core/previous_picture.py` draws the same picture byte for byte). With the previous chirp the
   drawing is byte for byte what SensDS made before the change. The stretch could not yet be checked
   on recordings made with the new chirp.
+- **Previous radar chirp (0.2 ms)**, under Previous spectrogram: reprograms the radar with the
+  chirp the starter model's recordings were made with (0.2 ms, 2 MHz, high-pass 80 kHz), using the
+  register list the site wrote until the change note (`src/avian/registers_tr13c_previous.js`, the
+  SDK export of 2026-10-05, byte for byte). The acquisition restarts between two frames. With it on,
+  the previous spectrogram needs no speed stretch. Every tab gets these frames: an orange
+  "Previous chirp 0.2 ms" chip shows at the top (click it to switch back), Visualize and Curve Fit
+  show the previous speed range (+/-6.17 m/s, 1.5 times the current one), Collect saves the chirp in
+  `capture_info.json` and warns before mixing chirps in one folder, and Analysis draws each recording
+  with its own chirp's speed range. It is off again after a reload. Not tested with the radar yet.
 - What the model sees: as many frames as a Collect sample of the same duration (20 for "3 s", about
   2 s of radar; the starter model's training pictures were 20 frames too). **Try a Gesture** captures
   that many after the click; the **Maze** counts down and captures 20 from GO!, so the whole gesture

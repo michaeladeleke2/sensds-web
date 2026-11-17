@@ -18,12 +18,16 @@
 // (numFramesFor), which is also what the starter model was trained on: Try a
 // Gesture takes numFramesFor(duration) frames as Collect does, RoboSoccer and
 // the Maze 20.
+// "Previous radar chirp" reprograms the radar with the chirp the starter
+// model's recordings were made with (0.2 ms; settings.js, radar_session.js);
+// the previous spectrogram then needs no speed stretch.
 // The starter model was trained on spectrograms drawn before the change note,
 // so it is shown that drawing ("Previous spectrogram", on for the starter
 // model, off for a student's own; src/test/previous_picture.js).
 
 import { subscribeFrames } from './radar_session.js';
-import { currentJetVmin } from './settings.js';
+import { currentJetVmin, setRadarChirp, getRadarChirp, onRadarChirpChange, CHIRP_CURRENT_S, CHIRP_PREVIOUS_S } from './settings.js';
+import { radarChirpRunning } from './radar_session.js';
 import { recordPrediction, announceModel, gameEvent } from './predictions.js';
 import { Maze, MAZE_ACTIONS, defaultMazeAction } from '../test/maze.js';
 import { loadStarterModel } from '../test/starter_model.js';
@@ -560,7 +564,8 @@ function runInference(frames, mode, epochFrames = MODEL_FRAMES) {
   }
   st.inferenceRunning = true; st.pendingMode = mode;
   const picture = $('previousPicture').checked ? 'previous' : 'current';
-  st.worker.postMessage({ type: 'predict', id: ++st.reqId, frames, nChirp: N_CHIRP, nSample: N_SAMPLE, jetVmin: currentJetVmin(), picture, epochFrames });
+  const chirpS = (radarChirpRunning() ?? getRadarChirp()) === 'previous' ? CHIRP_PREVIOUS_S : CHIRP_CURRENT_S;   // what these frames were recorded with
+  st.worker.postMessage({ type: 'predict', id: ++st.reqId, frames, nChirp: N_CHIRP, nSample: N_SAMPLE, jetVmin: currentJetVmin(), picture, epochFrames, chirpS });
 }
 
 function showPreview(image) {
@@ -645,6 +650,11 @@ export function initTest() {
   $('modeRs').onclick = () => setMode(MODE_RS);
   $('modeMaze').onclick = () => setMode(MODE_MAZE);
   $('captureBtn').onclick = startCapture;
+  // The radar's chirp (Test tab option, and the chip at the top on every tab)
+  const syncChirp = () => { const prev = getRadarChirp() === 'previous'; $('previousChirp').checked = prev; $('chirpChip').hidden = !prev; };
+  $('previousChirp').onchange = () => setRadarChirp($('previousChirp').checked ? 'previous' : 'current');
+  $('chirpChip').onclick = () => setRadarChirp('current');
+  onRadarChirpChange(syncChirp); syncChirp();
   $('rsStartBtn').onclick = startRobosoccer;
   $('rsStopBtn').onclick = stopRobosoccer;
   $('mazeStartBtn').onclick = startMaze;

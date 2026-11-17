@@ -16,6 +16,8 @@
 //                 interpolation. Speeds the current chirp cannot see (above
 //                 4.1 m/s, the outer sixth at each end) are filled with that
 //                 column's median, its background level.
+// With "Previous radar chirp" on (Test tab) the radar itself runs the 0.2 ms
+// chirp, the frames need no stretch, and the ratio is 1.
 // Nothing else in the app changes: Visualize, Collect, Analysis and a
 // student's own models keep the current drawing.
 
